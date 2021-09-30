@@ -40,7 +40,11 @@ import os
 
 
 对 DataFrame 求行列数
-        data.shape 返回一个元组，格式为 (行数, 列数)
+        1. data.index, 行数, 可以用data.index.values 转换为 'numpy.ndarray' 类型，类似 list
+        2. data.columns, 列数, 可以用 data.columns.values 转换为 'numpy.ndarray' 类型，类似 list
+        3. data.keys(), 列数, 和 data.columns 一模一样
+        4. list(data), 列数, 和 data.columns 差不多, 但类型是 list
+        4. data.shape, 返回一个元组, 格式为 (行数, 列数)
 
 
 notnull,isnull,dropna
@@ -63,6 +67,15 @@ DataFrame 支持的方法
         data[["height","weight","age"]].apply(np.sum, axis=0), 沿着 0 轴(列)求和
     2. DataFrame.applaymap(fun), 对DataFrame中的每个单元格执行指定函数的操作
         df.applymap(lambda x:"%.2f" % x), 将DataFrame中所有的值保留两位小数显示
+
+
+dropna 参数介绍，用法 data.iloc[[0, 1]].dropna(axis=1, how='any')
+    1. axis，按哪条轴删除，axis=0 表示按行删(默认)，axis=1 表示按列删。
+    2. how，删除条件，how='any' 表示只要存在 NaN 就删除(默认)，how='all' 表示全部为 NaN 就删除。
+    3. thresh，表示非空元素最低数量，thresh=2 表示小于等于两个空值的会被删除。
+    4. subset，子集，对指定的列进行删除，如 subset=["age", "sex"]。
+    5. inplace 表示原地替换，inplace=True 表示在元数据上直接更改。
+    6. notnull 也可以实现删除，参考【https://www.cnblogs.com/cgmcoding/p/13498229.html】
 """
 
 # 根路径
@@ -108,6 +121,29 @@ simple_excels_target = []
 # 汇总表的 sheet 页
 summary_sheet = "1、PBC汇总表"
 
+# SUM 类公式，格式为 {(科目, 行): 公式}，省去了列数
+index_sum = {("非流动资产合计", "13"): "5:12",
+             ("流动资产合计", "25"): "15:24",
+             ("母公司所有者权益", "31"): "28:30",
+             ("非流动负债合计", "37"): "35:36",
+             ("流动负债合计", "46"): "39:45",
+             ("毛利", "56"): "53:55",
+             ("经营利润", "64"): "56:63",
+             ("税前利润", "67"): "64:66",
+             ("净利润", "71"): "67:70",
+             ("期末未分配利润", "80"): "73,76:79",
+             }
+
+# 加减乘除类公式，格式为 {(科目, 行): 公式}，省去了列数
+index_plus = {("资产合计", "26"): "13+25",
+              ("权益合计", "33"): "31+32",
+              ("负债合计", "47"): "37+46",
+              ("权益及负债合计", "48"): "33+47",
+              ("检查", "49"): "26+48",
+              ("其中：母公司净利", "73"): "71-74",
+              ("检查", "81"): "80-30",
+              ("check RE", "84"): "83-76",
+              }
 
 # 把所有 excel 拷贝到一个文件夹下，并保存所有的 excel 名字和路径，默认不拷贝。
 def copy_excel(is_copy=False):
@@ -153,28 +189,38 @@ def copy_excel(is_copy=False):
 def get_name_from_summary_table():
     # 拼接出总表的绝对路径
     summary_table_path = os.path.join(root_path, result_path, result_excel)
-    summary_table_path = "D:\\testexcel\\合并报表202104.xlsx"
+    summary_table_path = "D:\\others\\excelTools\\excelTools\\changeCellsLink\\result-202104\\合并报表202104.xlsx"
     if not os.path.exists(summary_table_path):
         print("file not exist: %s" % summary_table_path)
         exit(0)
-    data = pandas.read_excel(summary_table_path, sheet_name="hebing1", header=None)
-    # 提取 DataFrame 的行数据，用索引定位行的方法： data[[0, 2]] 或者 data.iloc[:, [0, 2]], 切片也可以。
-    # iloc 指用索引定位行(左闭右开)，integer location，loc 指用标签定位行(左闭右闭)。
-    # 排序可以用 data=data.sort_values(by='学科类别')。
-    print(data.iloc[[0, 1]])
-
-    # axis=1 表示按列删, how='any' 表示只要存在 NaN 就删除，thresh 表示非空元素最低数量，subset 表示子集，inplace 表示原地替换
-    # 这里 dropna 会把包含 NaN 的所有列删除
-    # notnull 也可以实现，参考【pandas 的 notnull() 的返回非空值函数的用法】
+    data = pandas.read_excel(summary_table_path, sheet_name="Sheet1", header=None)
+    # 取第 0 和 1 行，删除空值的列
     filter_nan = data.iloc[[0, 1]].dropna(axis=1, how='any')
-    print("filter null:" + filter_nan)
+    print(filter_nan, end="\n\n")
+    # 把这两行数据转为 list
     company_id = filter_nan.iloc[0].to_list()
+    company_id = [id for id in company_id if id.encode('utf-8').isalnum()]
     company_short = filter_nan.iloc[1].to_list()
-    print(company_id)
-    print(company_short)
-    for id, name in zip(company_id, company_short):
-        simple_excels_target.append(pbc_prefix+id+name+pbc_suffix)
+    print("company_id is: \n %s \n\n company_short_name is:\n %s" % (company_id, company_short), end="\n\n")
+    print("%s company_id were recognized, check if it is correct" % len(company_id), end="\n\n")
+
+    # 用公司ID和简称拼接出完整的简表名称
+    for com_id, com_name in zip(company_id, company_short):
+        simple_excels_target.append(pbc_prefix + com_id + com_name + pbc_suffix)
     print(simple_excels_target)
+    # 检测是否能找到对应的 excel，哪几个找不到
+
+
+    # for row in data.itertuples():
+    #     print(row)
+
+
+def convertToTitle(n: int) -> str:
+    return ('' if n <= 26 else convertToTitle((n - 1) // 26)) + chr((n - 1) % 26 + ord('A'))
+
+
+# https://baijiahao.baidu.com/s?id=1626616692056869348&wfr=spider&for=pc
+# https://www.cnblogs.com/vhills/p/8327918.html
 
 
 
