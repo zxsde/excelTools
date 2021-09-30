@@ -7,6 +7,64 @@ import numpy as np
 import shutil
 import os
 
+""" 简要教程
+对 DataFrame 提取行数据
+    1. 用标签 loc 定位行(location), 
+        row_data = data.loc["a", "b"], 第 a 和 b 行，
+        row_data = data.loc["a": "b"], 第 "a"~"b" 行(不包含 "b" 行), 切片是左闭右开, 不包含右边界。
+
+    2. 用索引 iloc 定位行(integer location), 可以指定某几行, 或者某个区间的行 
+        row_data = data.iloc[0, 3], 第 0 和 3 行
+        row_data = data.iloc[0: 3], 第 0~3 行(不包含 3), 切片是左闭右开, 不包含右边界。
+
+
+对 DataFrame 提取列数据
+        row_data = data[2], 第 2 列, 从 0 开始计数
+        row_data = data[[0, 2]], 第 0 和 2 列
+        row_data = data[["a", "b"]], 第 "a" 和 "b" 列
+
+        row_data = data.iloc[:, [0, 2]], 第 0 和 2 列, 等同于row_data = data[[0, 2]], 第一个参数:代表所有行
+        row_data = data.iloc[[0: 2], [1: 3]], 第 0~2 行, 第 1~3 列, 切片不包含有边界。
+        row_data = data.iloc[[0, 2], [1, 2, 3]],第 0 和 2 行, 第 1 2 3 列, 切片代表第 0~2 行(不包含 2)。
+
+
+对 DataFrame 的指定列排序
+    1. 按索引排序
+        data.sort_index(), 对行行进行排序, 因为 axis 参数默认为0
+        data.sort_index(axis=1), 对列进行排序
+
+    2. 按值排序
+        data.sort_values(), 对行进行排序, 因为 axis 参数默认为0
+        data.sort_values(by="学科类别"), 对列进行排序
+        data=data.sort_values(by="学科类别", axis=1), 对列进行排序。
+
+
+对 DataFrame 求行列数
+        data.shape 返回一个元组，格式为 (行数, 列数)
+
+
+notnull,isnull,dropna
+
+DataFrame 数据转换
+    1. DataFrame 转 dict, data.to_dict()
+    2. DataFrame 转 list, data.iloc[0].to_list(), 只能对一行/列转换，是一个 Series 类型
+    3. DataFrame 转 String, data.astype(str)
+
+
+Series 支持的方法(https://zhuanlan.zhihu.com/p/100064394)
+    1. Series.map(fun), 依次取出 Series 中每个元素，作为参数传递给 fun
+        data["gender"] = data["gender"].map({"男":1, "女":0}), 把 gender 列的男替换为1，女替换为0，
+    2. Series.applay(fun), 和 map() 差不多，但是可以传入更复杂的参数
+        data["age"] = data["age"].apply(apply_age,args=(-3,)), age 列都减 3
+
+
+DataFrame 支持的方法
+    1. DataFrame.applay(fun), 依次取出 DataFrame 中每个元素，作为参数传递给 fun
+        data[["height","weight","age"]].apply(np.sum, axis=0), 沿着 0 轴(列)求和
+    2. DataFrame.applaymap(fun), 对DataFrame中的每个单元格执行指定函数的操作
+        df.applymap(lambda x:"%.2f" % x), 将DataFrame中所有的值保留两位小数显示
+"""
+
 # 根路径
 root_path = "F:\\Consolidated Statements\PBC\\sunac"
 
@@ -31,9 +89,21 @@ excel_suffix = ("xlsx", "xlsm", "xls")
 # 前缀，不处理该前缀的文件，该前缀一般是临时文件，防止已打开的 excel 和其临时文件相互合并
 excel_prefix = ("~$", "~")
 
+# PBC 简表名字前缀, 用于拼接出被链接的 excel 名称
+pbc_prefix = "PBC简表-"
 
-# 所有的 excel 简表，格式为{excel名字: 绝对路径}
+# PBC 简表名字后缀
+pbc_suffix = "-202104.xlsx"
+
+# 合并报表所在的 sheet 名
+sheet_name = "aaaa"
+
+# 所有的简表名称，从各分公司收回来的表，格式为{excel名字: 绝对路径}
 simple_excels = {}
+
+# 从合并报表中拼接中的简表名称，根据这个表来找 simple_excels 中的表
+simple_excels_target = []
+
 
 # 汇总表的 sheet 页
 summary_sheet = "1、PBC汇总表"
@@ -83,19 +153,28 @@ def copy_excel(is_copy=False):
 def get_name_from_summary_table():
     # 拼接出总表的绝对路径
     summary_table_path = os.path.join(root_path, result_path, result_excel)
+    summary_table_path = "D:\\testexcel\\合并报表202104.xlsx"
     if not os.path.exists(summary_table_path):
         print("file not exist: %s" % summary_table_path)
         exit(0)
-    data = pandas.read_excel(summary_table_path, sheet_name=summary_sheet, header=None)
-    # 提取公司编码和简称,列的用法是 id_name = data[[0, 2]] 或者 data.iloc[:, [0, 2]], 切片也可以用
-    # loc 指用标签定位行(左闭右闭)，iloc 指用索引定位行(左闭右开)，integer location
-    # 排序可以用 data=data.sort_values(by='学科类别')
-    id_name = data.iloc[[0, 2]]
+    data = pandas.read_excel(summary_table_path, sheet_name="hebing1", header=None)
+    # 提取 DataFrame 的行数据，用索引定位行的方法： data[[0, 2]] 或者 data.iloc[:, [0, 2]], 切片也可以。
+    # iloc 指用索引定位行(左闭右开)，integer location，loc 指用标签定位行(左闭右闭)。
+    # 排序可以用 data=data.sort_values(by='学科类别')。
+    print(data.iloc[[0, 1]])
 
-    print(type(id_name))
-    print(pandas.notnull(data.iloc[0:2]))
-    id_name.dropna(how="any", axis=1, subset=[0])
-    print(data.dropna(how='all'))
+    # axis=1 表示按列删, how='any' 表示只要存在 NaN 就删除，thresh 表示非空元素最低数量，subset 表示子集，inplace 表示原地替换
+    # 这里 dropna 会把包含 NaN 的所有列删除
+    # notnull 也可以实现，参考【pandas 的 notnull() 的返回非空值函数的用法】
+    filter_nan = data.iloc[[0, 1]].dropna(axis=1, how='any')
+    print("filter null:" + filter_nan)
+    company_id = filter_nan.iloc[0].to_list()
+    company_short = filter_nan.iloc[1].to_list()
+    print(company_id)
+    print(company_short)
+    for id, name in zip(company_id, company_short):
+        simple_excels_target.append(pbc_prefix+id+name+pbc_suffix)
+    print(simple_excels_target)
 
 
 
