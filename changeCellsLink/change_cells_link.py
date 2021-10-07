@@ -2,7 +2,7 @@
 
 import pandas
 import openpyxl
-import tqdm
+import re
 import numpy as np
 import shutil
 import os
@@ -93,6 +93,12 @@ result_path = "result-202106"
 # 合并报表
 result_excel = "文旅集团合并报表202106.xlsx"
 
+# 汇总表中指定被处理的列，
+specific_col = "A:B,F:J"
+
+# 汇总表中科目所在的列
+title_col = "B"
+
 # 公司清单
 companies_list = "公司清单-210917文旅.xlsx"
 
@@ -115,38 +121,49 @@ sheet_name = "aaaa"
 simple_excels = {}
 
 # 从合并报表中拼接中的简表名称，根据这个表来找 simple_excels 中的表
-simple_excels_target = []
-
+simple_excels_from_summary = []
 
 # 汇总表的 sheet 页
 summary_sheet = "1、PBC汇总表"
 
-# SUM 类公式，格式为 {(科目, 行): 公式}，省去了列数
-index_sum = {("非流动资产合计", "13"): "5:12",
-             ("流动资产合计", "25"): "15:24",
-             ("母公司所有者权益", "31"): "28:30",
-             ("非流动负债合计", "37"): "35:36",
-             ("流动负债合计", "46"): "39:45",
-             ("毛利", "56"): "53:55",
-             ("经营利润", "64"): "56:63",
-             ("税前利润", "67"): "64:66",
-             ("净利润", "71"): "67:70",
-             ("期末未分配利润", "80"): "73,76:79",
-             }
+# 单元格对应的公式，格式为 {C6: SUM(C2:C5)}
+cell_formulae = {}
 
-# 加减乘除类公式，格式为 {(科目, 行): 公式}，省去了列数
-index_plus = {("资产合计", "26"): "13+25",
-              ("权益合计", "33"): "31+32",
-              ("负债合计", "47"): "37+46",
-              ("权益及负债合计", "48"): "33+47",
-              ("检查", "49"): "26+48",
-              ("其中：母公司净利", "73"): "71-74",
-              ("检查", "81"): "80-30",
-              ("check RE", "84"): "83-76",
-              }
+# 链接类公式
+link_formulae = {
+    ("固定资产", "5"),
+    ("投资性资产", "6")
+}
+
+# SUM 类公式，格式为 {(科目, 行): 公式}，行是为了保证 key 的唯一性，公式中省去了列数
+sum_formulae = {
+    ("非流动资产合计", "13"): "5:12",
+    ("流动资产合计", "25"): "15:24",
+    ("母公司所有者权益", "31"): "28:30",
+    ("非流动负债合计", "37"): "35:36",
+    ("流动负债合计", "46"): "39:45",
+    ("毛利", "56"): "53:55",
+    ("经营利润", "64"): "56:63",
+    ("税前利润", "67"): "64:66",
+    ("净利润", "71"): "67:70",
+    ("期末未分配利润", "80"): "73,76:79",
+}
+
+# 加减乘除类公式，格式为 {(科目, 行): 公式}，行是为了保证 key 的唯一性，公式中省去了列数
+plus_formulae = {
+    ("资产合计", "26"): "13+25",
+    ("权益合计", "33"): "31+32",
+    ("负债合计", "47"): "37+46",
+    ("权益及负债合计", "48"): "33+47",
+    ("检查", "49"): "26+48",
+    ("其中：母公司净利", "73"): "71-74",
+    ("检查", "81"): "80-30",
+    ("check RE", "84"): "83-76"
+}
+
 
 # 把所有 excel 拷贝到一个文件夹下，并保存所有的 excel 名字和路径，默认不拷贝。
-def copy_excel(is_copy=False):
+def copy_excel_to_target(is_copy=False):
     # 拼接出原目文件夹的绝对路径
     source_absolute_path = os.path.join(root_path, source_path)
     target_absolute_path = os.path.join(root_path, target_path)
@@ -185,38 +202,92 @@ def copy_excel(is_copy=False):
     print(simple_excels)
 
 
-# 从汇总表中获取公司编码和简称
-def get_name_from_summary_table():
+# 从汇总表中获取公司编码和简称，拼接出简表名称，检查是否能找到这些简表
+def get_name_from_summary_table(sheet_name="Sheet1", usecols="A:B,F:J"):
     # 拼接出总表的绝对路径
     summary_table_path = os.path.join(root_path, result_path, result_excel)
-    summary_table_path = "D:\\others\\excelTools\\excelTools\\changeCellsLink\\result-202104\\合并报表202104.xlsx"
+    summary_table_path = "E:\\pythonProject\\excelTools\\changeCellsLink\\result-202104\\合并报表202104.xlsx"
     if not os.path.exists(summary_table_path):
         print("file not exist: %s" % summary_table_path)
         exit(0)
-    data = pandas.read_excel(summary_table_path, sheet_name="Sheet1", header=None)
+    # usecols 可选参数 1. 默认 None，全选 2. str类型，"A,B,C" "A:C" "A,B:C" 3. int-list，[0, 1]  4. str-list, ["列名1", "列名2"]
+    # 5. 函数，会把列名传入判断函数结果是否为True，可以用 | 做多个判断, usecols=lambda x:x in ["id", "name", "sex"]
+    data = pandas.read_excel(summary_table_path, sheet_name="Sheet1", usecols=usecols, header=None)
+    print(data)
     # 取第 0 和 1 行，删除空值的列
     filter_nan = data.iloc[[0, 1]].dropna(axis=1, how='any')
     print(filter_nan, end="\n\n")
     # 把这两行数据转为 list
     company_id = filter_nan.iloc[0].to_list()
-    company_id = [id for id in company_id if id.encode('utf-8').isalnum()]
     company_short = filter_nan.iloc[1].to_list()
+    # 过滤掉公司编码为非字母数字的列
+    company_short = [company_short[i] for i in range(len(company_id)) if company_id[i].encode('utf-8').isalnum()]
+    company_id = [com_id for com_id in company_id if com_id.encode('utf-8').isalnum()]
     print("company_id is: \n %s \n\n company_short_name is:\n %s" % (company_id, company_short), end="\n\n")
     print("%s company_id were recognized, check if it is correct" % len(company_id), end="\n\n")
 
     # 用公司ID和简称拼接出完整的简表名称
     for com_id, com_name in zip(company_id, company_short):
-        simple_excels_target.append(pbc_prefix + com_id + com_name + pbc_suffix)
-    print(simple_excels_target)
-    # 检测是否能找到对应的 excel，哪几个找不到
+        simple_excels_from_summary.append(pbc_prefix + com_id + com_name + pbc_suffix)
+    print(simple_excels_from_summary, end="\n\n")
+
+    # 检测是否能找到对应的简表
+    excel_not_exist = set(simple_excels_from_summary) - set(simple_excels.keys())
+    print("%s excels can't found:\n %s" % (len(excel_not_exist), excel_not_exist))
+
+    cal_formulae(data, company_id)
 
 
-    # for row in data.itertuples():
-    #     print(row)
+# 计算各科目和公司对应单元格的公式
+def cal_formulae(data, company_id) -> dict:
+    print("get_formulae:", data.columns.values)
+    for i in data.columns.values:
+    # for i in range(3):
+        com_id = data[i][0]
+        # 公司编码不在 company_id 中就跳过，company_id 是经过过滤的公司编码
+        if com_id not in company_id:
+            continue
+
+        col = convert_to_column(i + 1)
+        # 遍历每一行，计算各科目的公式
+        for row in data.itertuples():
+            # 所有科目都在第二列
+            account_title = row[ord(title_col) - ord("A") + 1]
+            # 为空时候获取到的是 float 格式的 nan ，直接跳过，我们只解析字符串
+            if not isinstance(account_title, str):
+                continue
+
+            # 科目和行数，用于匹配是哪种类型的公式，row.Index 从 0 计数，所以比真实的 excel 行数少 1
+            title_cell = (account_title.strip(), str(row.Index + 1))
+            # 链接类公式处理
+            if title_cell in link_formulae:
+                continue
+            else:
+                # 单元格，row.Index 从 0 计数，比真实的 excel 行数少 1，所以需要加 1
+                cell = str(col) + str(row.Index + 1)
+                # SUM 类公式处理
+                if title_cell in sum_formulae:
+                    # 拼接出完整的公式，如 SUM(C5:C12)，保存到 cell_formulae
+                    formulae = get_formulae(col, sum_formulae[title_cell])
+                    cell_formulae[cell] = "SUM({})".format(formulae)
+                # PLUS 类公式处理
+                elif title_cell in plus_formulae:
+                    # 拼接出完整的公式，如 C5+C12，保存到 cell_formulae
+                    formulae = get_formulae(col, plus_formulae[title_cell])
+                    cell_formulae[cell] = formulae
+
+    print("%s formulae \n %s" % (len(cell_formulae), cell_formulae), end="\n\n")
+    return cell_formulae
 
 
-def convertToTitle(n: int) -> str:
-    return ('' if n <= 26 else convertToTitle((n - 1) // 26)) + chr((n - 1) % 26 + ord('A'))
+# 把列转换为字母，如第 27 列转化为 ZA
+def convert_to_column(n: int) -> str:
+    # ord 返回对应的 ASCII 数值, 'A' = 65
+    ascii_letter = (n - 1) % 26 + ord('A')
+    if n <= 26:
+        return chr(ascii_letter)
+    else:
+        return convert_to_column((n - 1) // 26) + chr(ascii_letter)
 
 
 # https://baijiahao.baidu.com/s?id=1626616692056869348&wfr=spider&for=pc
@@ -248,6 +319,20 @@ def change_link():
     print(p)
     print(q)
 
+
+# 拼接公式，把 C 列的 73,76:79 拼接成 C73,C76:C79
+def get_formulae(column: str, s: str) -> str:
+    formulae = [column, s[0]]
+    for i in range(1, len(s)):
+        if s[i] == ' ':
+            continue
+        # 当前字符的前一位不是数字，则插入一个 column
+        if not s[i - 1].isdigit():
+            formulae.append(column)
+        formulae.append(s[i])
+    return "".join(formulae)
+
+
 if __name__ == '__main__':
     print("11")
     # 把所有的 excel 拷贝到指定文件夹
@@ -255,12 +340,5 @@ if __name__ == '__main__':
 
     get_name_from_summary_table()
 
-    # data = pandas.DataFrame()
-    # data['a'] = [1, 2, 3, 4]
-    # data['b'] = [1, 2, np.nan, np.nan]
-    # print(data)
-    # print("------")
-    # print(data.iloc[3])
-    # print(data[data['b'].notnull()])
 
     # change_link()
