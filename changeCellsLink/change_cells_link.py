@@ -78,29 +78,35 @@ dropna 参数介绍，用法 data.iloc[[0, 1]].dropna(axis=1, how='any')
     6. notnull 也可以实现删除，参考【https://www.cnblogs.com/cgmcoding/p/13498229.html】
 """
 
-# 根路径
-root_path = "F:\\Consolidated Statements\PBC\\sunac"
+# 根路径，所有代码，excel 的所在路径
+# root_path = "F:\\Consolidated Statements\PBC\\sunac"
+root_path = "D:\\excelTools\\changeCellsLink"
 
 # PBC集合，包含很多文件夹，该路径下所有 excel 都会被拷贝到目标路径
-source_path = "【PBC 集合】202106"
+# source_path = "【PBC 集合】202106"
+source_path = "source\\4月"
 
-# 目标路径
-target_path = "source-202106"
+# 目标路径，所有 PBC 表被统一拷贝到这里
+# target_path = "source-202106"
+target_path = "result-202104\\all_PBC"
 
 # 合并报表的路径
-result_path = "result-202106"
+# result_path = "result-202106"
+result_path = "result-202104\\summary_table"
 
-# 合并报表
-result_excel = "文旅集团合并报表202106.xlsx"
+# 合并报表的名称
+# result_excel = "文旅集团合并报表202106.xlsx"
+result_excel = "合并报表202104.xlsx"
 
-# 汇总表中指定被处理的列，
-specific_col = "A:B,F:J"
+# 汇总表中指定被处理的列，如果所有列都需要处理，则改为 None
+specific_col = "A:B,G:J"
 
-# 汇总表中科目所在的列
-title_col = "B"
+# 汇总表中科目所在的列，目前仅支持 'A' - 'Z'
+title_col = 'B'
 
 # 公司清单
-companies_list = "公司清单-210917文旅.xlsx"
+# companies_list = "公司清单-210917文旅.xlsx"
+companies_list = "公司清单-202104苹果.xlsx"
 
 # 后缀，只处理该后缀的文件。目前只支持 "xlsx", "xlsm", "xls" 三种格式
 excel_suffix = ("xlsx", "xlsm", "xls")
@@ -114,17 +120,18 @@ pbc_prefix = "PBC简表-"
 # PBC 简表名字后缀
 pbc_suffix = "-202104.xlsx"
 
-# 合并报表所在的 sheet 名
-sheet_name = "aaaa"
+# 简表需要合并的 sheet 名
+sheet_name = "summary1"
 
 # 所有的简表名称，从各分公司收回来的表，格式为{excel名字: 绝对路径}
-simple_excels = {}
+simple_tables = {}
 
-# 从合并报表中拼接中的简表名称，根据这个表来找 simple_excels 中的表
-simple_excels_from_summary = []
+# 从合并报表中拼接中的简表名称，格式为 {公司编码: 简表名称}
+simple_tables_from_summary = {}
 
 # 汇总表的 sheet 页
-summary_sheet = "1、PBC汇总表"
+# summary_sheet = "1、PBC汇总表"
+summary_sheet = "summary1"
 
 # 单元格对应的公式，格式为 {C6: SUM(C2:C5)}
 cell_formulae = {}
@@ -196,24 +203,23 @@ def copy_excel_to_target(is_copy=False):
             if is_copy:
                 shutil.copyfile(source_excel, target_excel)
             # 保存所有excel的名字和绝对路径
-            simple_excels[file] = target_excel
+            simple_tables[file] = target_excel
     # 检查 excel 的个数是否正确
-    print("find %s files in %s, check if the number of excel is correct" % (len(simple_excels), target_path))
-    print(simple_excels)
+    print("find %s files in %s, check if the number of excel is correct" % (len(simple_tables), target_path))
+    print(simple_tables)
 
 
 # 从汇总表中获取公司编码和简称，拼接出简表名称，检查是否能找到这些简表
-def get_name_from_summary_table(sheet_name="Sheet1", usecols="A:B,F:J"):
+def get_name_from_summary_table(sheet_name="Sheet1", usecols=specific_col):
     # 拼接出总表的绝对路径
     summary_table_path = os.path.join(root_path, result_path, result_excel)
-    summary_table_path = "E:\\pythonProject\\excelTools\\changeCellsLink\\result-202104\\合并报表202104.xlsx"
+    summary_table_path = "F:\\xing\\excelTools\\changeCellsLink\\result-202104\\合并报表202104.xlsx"
     if not os.path.exists(summary_table_path):
         print("file not exist: %s" % summary_table_path)
         exit(0)
     # usecols 可选参数 1. 默认 None，全选 2. str类型，"A,B,C" "A:C" "A,B:C" 3. int-list，[0, 1]  4. str-list, ["列名1", "列名2"]
     # 5. 函数，会把列名传入判断函数结果是否为True，可以用 | 做多个判断, usecols=lambda x:x in ["id", "name", "sex"]
     data = pandas.read_excel(summary_table_path, sheet_name="Sheet1", usecols=usecols, header=None)
-    print(data)
     # 取第 0 和 1 行，删除空值的列
     filter_nan = data.iloc[[0, 1]].dropna(axis=1, how='any')
     print(filter_nan, end="\n\n")
@@ -228,11 +234,11 @@ def get_name_from_summary_table(sheet_name="Sheet1", usecols="A:B,F:J"):
 
     # 用公司ID和简称拼接出完整的简表名称
     for com_id, com_name in zip(company_id, company_short):
-        simple_excels_from_summary.append(pbc_prefix + com_id + com_name + pbc_suffix)
-    print(simple_excels_from_summary, end="\n\n")
+        simple_tables_from_summary[com_id] = pbc_prefix + com_id + com_name + pbc_suffix
+    print(simple_tables_from_summary, end="\n\n")
 
     # 检测是否能找到对应的简表
-    excel_not_exist = set(simple_excels_from_summary) - set(simple_excels.keys())
+    excel_not_exist = set(simple_tables_from_summary.values()) - set(simple_tables.keys())
     print("%s excels can't found:\n %s" % (len(excel_not_exist), excel_not_exist))
 
     cal_formulae(data, company_id)
@@ -252,33 +258,45 @@ def cal_formulae(data, company_id) -> dict:
         # 遍历每一行，计算各科目的公式
         for row in data.itertuples():
             # 所有科目都在第二列
-            account_title = row[ord(title_col) - ord("A") + 1]
+            account_title = row[ord(title_col) - ord('A') + 1]
             # 为空时候获取到的是 float 格式的 nan ，直接跳过，我们只解析字符串
             if not isinstance(account_title, str):
                 continue
 
+            # 单元格，row.Index 从 0 计数，比真实的 excel 行数少 1，所以需要加 1
+            cell = str(col) + str(row.Index + 1)
             # 科目和行数，用于匹配是哪种类型的公式，row.Index 从 0 计数，所以比真实的 excel 行数少 1
             title_cell = (account_title.strip(), str(row.Index + 1))
             # 链接类公式处理
             if title_cell in link_formulae:
-                continue
+                simple_table = simple_tables_from_summary[com_id]
+                cell_formulae[cell] = "{}".format(simple_table)
             else:
-                # 单元格，row.Index 从 0 计数，比真实的 excel 行数少 1，所以需要加 1
-                cell = str(col) + str(row.Index + 1)
                 # SUM 类公式处理
                 if title_cell in sum_formulae:
                     # 拼接出完整的公式，如 SUM(C5:C12)，保存到 cell_formulae
                     formulae = get_formulae(col, sum_formulae[title_cell])
-                    cell_formulae[cell] = "SUM({})".format(formulae)
+                    cell_formulae[cell] = "=SUM({})".format(formulae)
                 # PLUS 类公式处理
                 elif title_cell in plus_formulae:
                     # 拼接出完整的公式，如 C5+C12，保存到 cell_formulae
                     formulae = get_formulae(col, plus_formulae[title_cell])
-                    cell_formulae[cell] = formulae
+                    cell_formulae[cell] = "={}".format(formulae)
 
     print("%s formulae \n %s" % (len(cell_formulae), cell_formulae), end="\n\n")
     return cell_formulae
 
+
+# 写入公式
+def write_formulae():
+    summary_table_path = "F:\\xing\\excelTools\\changeCellsLink\\result-202104\\合并报表202104.xlsx"
+    summary_sheet = "Sheet1"
+    wb = openpyxl.load_workbook(summary_table_path)
+    ws = wb[summary_sheet]
+    for k, v in cell_formulae.items():
+        # print(k, v)
+        ws[k] = v
+    wb.save(summary_table_path)
 
 # 把列转换为字母，如第 27 列转化为 ZA
 def convert_to_column(n: int) -> str:
@@ -339,6 +357,6 @@ if __name__ == '__main__':
     # copy_excel(is_copy=False)
 
     get_name_from_summary_table()
-
+    write_formulae()
 
     # change_link()
