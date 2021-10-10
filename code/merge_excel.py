@@ -1,10 +1,7 @@
 #!/usr/bin/python3
 
 import pandas
-import openpyxl
 import os
-from openpyxl import load_workbook
-from openpyxl import Workbook
 
 
 """
