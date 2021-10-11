@@ -1,12 +1,18 @@
 #!/usr/bin/python3
 
-import pandas
-import openpyxl
 import sys
 import os
 
+import pandas
+import openpyxl
+
 from win32com.client import Dispatch
 from tqdm import tqdm
+
+import conf.constant as constant
+
+
+# ===================================== 一般情况，仅需修改如下参数，因为每个月的文件目录/文件名都会变化
 
 # 根路径，所有代码，excel 的所在路径
 ROOT_PATH = "F:\\xing\\excelTools\\"
@@ -20,11 +26,22 @@ ALL_PBC_PATH = "target\\result-202104\\all_PBC"
 # PRC目录，所有 PRC 表都将被拷贝到这里
 ALL_PRC_PATH = "target\\result-202104\\all_PRC"
 
-# 合并报表的路径
-RESULT_PATH = "target\\result-202104\\summary_table"
+# 总表的路径
+SUMMARY_TABLE_PATH = "target\\result-202104\\summary_table"
 
-# 合并报表的名称
-RESULT_TABLE = "合并报表202104.xlsx"
+# 总表的名称
+SUMMARY_TABLE_NAME = "合并报表202104.xlsx"
+
+# PBC 简表名字后缀
+TABLE_SUFFIX = "202104.xlsx"
+
+# 汇总表中指定被处理的列，如果所有列都需要处理，则改为 None
+SPECIFIC_COL = "A:B,G:J"
+
+# 公司清单表
+COMPANY_LIST = "公司清单-202104苹果.xlsx"
+
+# ===================================== 一般情况，仅需修改以上参数，因为每个月的文件目录/文件名都会变化
 
 # PBC 简表名字前缀。
 PBC_PREFIX = "PBC简表"
@@ -32,134 +49,43 @@ PBC_PREFIX = "PBC简表"
 # PRC 简表名字前缀。
 PRC_PREFIX = "PRC简表"
 
-# PBC 简表名字后缀
-TABLE_SUFFIX = "202104.xlsx"
-
 # EXCEl 文件后缀，只处理该后缀的文件。
 EXCEL_SUFFIX = ("xlsx", "xlsm", "xls")
 
 # 临时文件前缀，不处理该前缀的文件，该前缀一般是临时文件，如已打开的 excel 会额外生成一个额 ~ 开头的文件
 TEMP_PREFIX = ("~$", "~")
 
-# 汇总表中指定被处理的列，如果所有列都需要处理，则改为 None
-specific_col = "A:B,G:J"
-
 # 汇总表中科目所在的列，目前仅支持 'A' - 'Z'
-title_col = 'B'
-
-# 公司清单表
-COMPANY_LIST = "公司清单-202104苹果.xlsx"
+TITLE_COL = 'B'
 
 # 简表需要合并的 sheet 名
-simple_sheet = "test1"
+SIMPLE_SHEET = "test1"
+
+# 汇总表的 sheet 页
+# summary_sheet = "1、PBC汇总表"
+SUMMARY_SHEET = "summary1"
+
+# 链接类公式
+LINK_FORMULAE = constant.LINK_FORMULAE
+
+# SUM 类公式，格式为 {(科目, 行): 公式}，行是为了保证 key 的唯一性，公式中省去了列数
+SUM_FORMULAE = constant.SUM_FORMULAE
+
+# 加减乘除类公式，格式为 {(科目, 行): 公式}，行是为了保证 key 的唯一性，公式中省去了列数
+PLUS_FORMULAE = constant.PLUS_FORMULAE
 
 # 所有的简表名称，从各分公司收回来的表，格式为{excel名字: 绝对路径}
 simple_tables = {}
 
 # 从合并报表中拼接中的简表名称，格式为 {公司编码: 简表名称}
-simple_tables_from_summary = {}
-
-# 汇总表的 sheet 页
-# summary_sheet = "1、PBC汇总表"
-summary_sheet = "summary1"
+standard_simple_tables = {}
 
 # 单元格对应的公式，格式为 {C6: SUM(C2:C5)}
 cell_formulae = {}
 
-# 链接类公式
-link_formulae = {
-    ("固定资产", "5"): "!$G6",
-    ("投资性资产", "6"): "!$G7",
-    ("长期金融资产", "7"): "!$G8",
-    ("长期股权投资", "8"): "!$G9",
-    ("商誉", "9"): "!$G10",
-    ("其他无形资产", "10"): "!$G11",
-    ("递延所得税资产", "11"): "!$G12",
-    ("其他长期资产", "12"): "!$G13",
-
-    ("预付土地款", "15"): "!$G16",
-    ("开发中物业", "16"): "!$G17",
-    ("持作销售的完工物业", "17"): "!$G18",
-    ("应收及其他应收款", "18"): "!$G19",
-    ("预付税金", "19"): "!$G20",
-    ("应收内部往来", "20"): "!$G21",
-    ("应收关联方", "21"): "!$G22",
-    ("短期金融资产", "22"): "!$G23",
-    ("受限资金", "23"): "!$G724",
-    ("现金及现金等价物", "24"): "!$G25",
-
-    ("股本", "28"): "!$G29",
-    ("储备", "29"): "!$G30",
-    ("留存收益", "30"): "!$G31",
-
-    ("少数股东权益", "32"): "!$G33",
-
-    ("长期借款", "35"): "!$G36",
-    ("递延所得税负债", "36"): "!$G37",
-
-    ("其他负债", "39"): "!$G40",
-    ("应付及其他应付款", "40"): "!$G41",
-    ("预收账款", "41"): "!$G42",
-    ("应交税金（核算企业所得税及土地增值税）", "42"): "!$G43",
-    ("应付内部往来", "43"): "!$G44",
-    ("应付关联方", "44"): "!$G45",
-    ("短期借款", "45"): "!$G46",
-
-    ("销售收入", "53"): "!$G54",
-    ("减：销售税金及附加", "54"): "!$G55",
-    ("销售成本", "55"): "!$G56",
-
-    ("加：投资性物业公允值变化", "58"): "!$G59",
-    ("减值准备", "59"): "!$G60",
-    ("其他收入", "60"): "!$G61",
-    ("减：销售费用", "61"): "!$G62",
-    ("管理费用", "62"): "!$G63",
-    ("其他费用", "63"): "!$G64",
-
-    ("减：财务费用（仅核算利息支出）", "66"): "!$G67",
-
-    ("减：土地增值税", "69"): "!$G70",
-    ("减：企业所得税", "70"): "!$G71",
-
-    ("其中：母公司净利", "73"): "!$G74",
-    ("少数股东收益", "74"): "!$G75",
-
-    ("加：期初未分配利润", "76"): "!$G77",
-    ("加：新收入准则期初影响", "77"): "!$G78",
-    ("减：提取法定盈余公积", "78"): "!$G79",
-    ("减：分配利润", "79"): "!$G80",
-
-}
-
-# SUM 类公式，格式为 {(科目, 行): 公式}，行是为了保证 key 的唯一性，公式中省去了列数
-sum_formulae = {
-    ("非流动资产合计", "13"): "5:12",
-    ("流动资产合计", "25"): "15:24",
-    ("母公司所有者权益", "31"): "28:30",
-    ("非流动负债合计", "37"): "35:36",
-    ("流动负债合计", "46"): "39:45",
-    ("毛利", "56"): "53:55",
-    ("经营利润", "64"): "56:63",
-    ("税前利润", "67"): "64:66",
-    ("净利润", "71"): "67:70",
-    ("期末未分配利润", "80"): "73,76:79",
-}
-
-# 加减乘除类公式，格式为 {(科目, 行): 公式}，行是为了保证 key 的唯一性，公式中省去了列数
-plus_formulae = {
-    ("资产合计", "26"): "13+25",
-    ("权益合计", "33"): "31+32",
-    ("负债合计", "47"): "37+46",
-    ("权益及负债合计", "48"): "33+47",
-    ("检查", "49"): "26+48",
-    ("其中：母公司净利", "73"): "71-74",
-    ("检查", "81"): "80-30",
-    ("check RE", "84"): "83-76"
-}
-
 
 # 从汇总表中获取公司编码和简称，拼接出简表名称，检查是否能找到这些简表
-def get_name_from_summary_table(sheet_name=summary_sheet, usecols=specific_col):
+def get_name_from_summary_table(sheet_name=SUMMARY_SHEET, usecols=SPECIFIC_COL):
     # 所有 PBC 所在的路径
     pbc_absolute_path = os.path.join(ROOT_PATH, ALL_PBC_PATH)
     # 遍历所有 PBC 简表，保存为  格式
@@ -177,7 +103,7 @@ def get_name_from_summary_table(sheet_name=summary_sheet, usecols=specific_col):
     print(simple_tables)
 
     # 拼接出总表的绝对路径
-    summary_table_path = os.path.join(ROOT_PATH, RESULT_PATH, RESULT_TABLE)
+    summary_table_path = os.path.join(ROOT_PATH, SUMMARY_TABLE_PATH, SUMMARY_TABLE_NAME)
     print("summary table path: \n", summary_table_path, end="\n\n")
     if not os.path.exists(summary_table_path):
         print("file not exist: %s" % summary_table_path)
@@ -199,11 +125,11 @@ def get_name_from_summary_table(sheet_name=summary_sheet, usecols=specific_col):
 
     # 用公司ID和简称拼接出完整的简表名称
     for com_id, com_name in zip(company_id, company_short):
-        simple_tables_from_summary[com_id] = PBC_PREFIX + "-" + com_id + com_name + "-" +TABLE_SUFFIX
-    print(simple_tables_from_summary, end="\n\n")
+        standard_simple_tables[com_id] = PBC_PREFIX + "-" + com_id + com_name + "-" +TABLE_SUFFIX
+    print(standard_simple_tables, end="\n\n")
 
     # 检测是否能找到对应的简表
-    excel_not_exist = set(simple_tables_from_summary.values()) - set(simple_tables.keys())
+    excel_not_exist = set(standard_simple_tables.values()) - set(simple_tables.keys())
     print("%s excels can't found:\n %s" % (len(excel_not_exist), excel_not_exist), end="\n\n")
 
     cal_formulae(data, company_id)
@@ -212,7 +138,8 @@ def get_name_from_summary_table(sheet_name=summary_sheet, usecols=specific_col):
 # 计算各科目和公司对应单元格的公式
 def cal_formulae(data, company_id) -> dict:
     print("the data include following columns: \n", data.columns.values, end="\n\n")
-    target_absolute_path = os.path.join(ROOT_PATH, ALL_PBC_PATH)
+    # 所有 PBC 的绝对路径，第三个参数 '' 是为了在文件夹结尾多一个 \ ，否则拼接文件时会把目录连起来
+    target_absolute_path = os.path.join(ROOT_PATH, ALL_PBC_PATH, '')
     for i in data.columns.values:
         com_id = data[i][0]
         # 公司编码不在 company_id 中就跳过，company_id 是经过过滤的公司编码
@@ -223,7 +150,7 @@ def cal_formulae(data, company_id) -> dict:
         # 遍历每一行，计算各科目的公式
         for row in data.itertuples():
             # 所有科目都在第二列
-            account_title = row[ord(title_col) - ord('A') + 1]
+            account_title = row[ord(TITLE_COL) - ord('A') + 1]
             # 为空时候获取到的是 float 格式的 nan ，直接跳过，我们只解析字符串
             if not isinstance(account_title, str):
                 continue
@@ -232,20 +159,20 @@ def cal_formulae(data, company_id) -> dict:
             cell = str(col) + str(row.Index + 1)
             # 科目和行数，用于匹配是哪种类型的公式，row.Index 从 0 计数，所以比真实的 excel 行数少 1
             title_cell = (account_title.strip(), str(row.Index + 1))
-            # 链接类公式处理
-            if title_cell in link_formulae:
-                simple_table = simple_tables_from_summary[com_id]
-                cell_formulae[cell] = "={}".format('\'' + target_absolute_path + '[' + simple_table + ']' + simple_sheet + '\'' + link_formulae[title_cell])
-                print('\'' + target_absolute_path + '[' + simple_table + ']' + simple_sheet + '\'' + link_formulae[title_cell])
+            # 链接类公式处理，链接的格式形如 '路径\[excel名]表名'!$单元格'
+            if title_cell in LINK_FORMULAE:
+                simple_table = standard_simple_tables[com_id]
+                cell_formulae[cell] = "={}".format('\'' + target_absolute_path + '[' + simple_table + ']' +
+                                                   SIMPLE_SHEET + '\'' + LINK_FORMULAE[title_cell])
             # SUM 类公式处理
-            elif title_cell in sum_formulae:
+            elif title_cell in SUM_FORMULAE:
                 # 拼接出完整的公式，如 SUM(C5:C12)，保存到 cell_formulae
-                formulae = get_formulae(col, sum_formulae[title_cell])
+                formulae = get_formulae(col, SUM_FORMULAE[title_cell])
                 cell_formulae[cell] = "=SUM({})".format(formulae)
             # PLUS 类公式处理
-            elif title_cell in plus_formulae:
+            elif title_cell in PLUS_FORMULAE:
                 # 拼接出完整的公式，如 C5+C12，保存到 cell_formulae
-                formulae = get_formulae(col, plus_formulae[title_cell])
+                formulae = get_formulae(col, PLUS_FORMULAE[title_cell])
                 cell_formulae[cell] = "={}".format(formulae)
 
     print("%s formulae \n %s" % (len(cell_formulae), cell_formulae), end="\n\n")
@@ -254,10 +181,10 @@ def cal_formulae(data, company_id) -> dict:
 
 # 写入公式
 def write_formulae():
-    summary_table_path = os.path.join(ROOT_PATH, RESULT_PATH, RESULT_TABLE)
+    summary_table_path = os.path.join(ROOT_PATH, SUMMARY_TABLE_PATH, SUMMARY_TABLE_NAME)
     print("summary table path: \n", summary_table_path, end="\n\n")
     wb = openpyxl.load_workbook(summary_table_path)
-    ws = wb[summary_sheet]
+    ws = wb[SUMMARY_SHEET]
     for k, v in tqdm(cell_formulae.items()):
         ws[k] = v
     wb.save(summary_table_path)
