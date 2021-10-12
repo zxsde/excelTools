@@ -103,7 +103,7 @@ def merge_sheet():
             data = pandas.read_excel(file, sheet_name=sheet_name, skiprows=OFFSET)
             # 选取 data 中 "调整后" 列包含数字 0 的行，然后取反
             # 删除指定列为空的行可以用 data = df.dropna(subset=["调整后"], axis=0, how='any')
-            data = data[~data["调整后"].isin([0])]
+            data = data[~data[SPECIFIC_COL].isin([0])]
             data["source excel"] = file
             # concat默认纵向连接DataFrame对象，并且合并之后不改变每个DataFrame子对象的index值
             dfs = pandas.concat([dfs, data])

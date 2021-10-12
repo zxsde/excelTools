@@ -6,6 +6,9 @@ import sys
 
 """##############      一般情况，仅需修改如下参数，每个季度的用不同的文件夹      ##############"""
 
+# 根路径，项目所在的目录
+ROOT_PATH = "D:\\excelTools\\"
+
 # PBC集合，包含很多文件夹，该路径下所有 excel 都会被拷贝到目标路径
 SOURCE_PATH = "source\\source-202104"
 
@@ -19,9 +22,6 @@ ALL_PRC_PATH = "target\\result-202104\\all_PRC"
 OTHER_FILE_PATH = "target\\result-202104\\other"
 
 """##############      一般情况，仅需修改如上参数，每个季度的用不同的文件夹      ##############"""
-
-# 根路径，项目所在的目录
-ROOT_PATH = "D:\\excelTools\\"
 
 # PBC 简表名字前缀。
 PBC_PREFIX = "PBC"

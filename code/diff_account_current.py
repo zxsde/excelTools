@@ -11,7 +11,7 @@ import openpyxl
 # ===================================== 一般情况，仅需修改如下参数，因为每个月的文件目录/文件名都会变化
 
 # 根路径，所有代码，excel 的所在路径
-ROOT_PATH = "D:\\others\\excelTools\\"
+ROOT_PATH = "D:\\excelTools\\"
 
 # 往来账款表所在路径
 ACCOUNT_CURRENT_PATH = "target\\result-202104\\summary_table"
@@ -42,30 +42,50 @@ def diff_account_current():
     account_current_path = os.path.join(ROOT_PATH, ACCOUNT_CURRENT_PATH, ACCOUNT_CURRENT)
     print("account_current_path: \n", account_current_path, end="\n\n")
     is_exist(account_current_path)
-    data = pandas.read_excel(account_current_path, sheet_name=SHEET_NAME, usecols=SPECIFIC_COL)
+    data = pandas.read_excel(account_current_path, sheet_name=SHEET_NAME, usecols=SPECIFIC_COL, header=None)
     # 删除包含空值的行
-    data = data.dropna(axis=0, how='any')
-
+    data = data.dropna(axis=0, how='all')
+    print(data)
     all_accounts = {}
-    # 遍历表，保存所有往来账目，格式为 {(公司, 公司): (行数, 金额)}
+    # 遍历表，保存所有往来账目，格式为 {(公司, 公司): (行数, 金额)}，行数是为了回写数据
     for row in data.itertuples():
-        all_accounts[(row[SOURCE_COMPANY_A], row[SOURCE_COMPANY_B])] = (row.Index, row[SOURCE_MONEY])
-    print(all_accounts)
+        # row.Index 从 0 开始，比 excel 中实际行数少 1
+        all_accounts[(row[SOURCE_COMPANY_A], row[SOURCE_COMPANY_B])] = (row.Index+1, row[SOURCE_MONEY])
+    print("all_accounts", all_accounts)
 
+    # 乙方到甲方的账款 {行数: (公司B, 公司A, 金额)}
     party_b_account = {}
     temp = {}
     # 根据甲方账款找对应的乙方账款
     for k in list(all_accounts):
+        # (行数, 金额)
         v1 = all_accounts[k]
-        v2 = all_accounts[(k[1], k[0])]
-        if (k[1], k[0]) in all_accounts.keys():
-            party_b_account[v1[0]] = (k[1], k[0], v2[1])
-            temp[(k[1], k[0])] = (v2[0], v2[1])
+        v2 = (k[1], k[0])
+        if v2 in all_accounts:
+            party_b_account[v1[0]] = (k[1], k[0], all_accounts[v2][1])
+            temp[v2] = (all_accounts[v2][0], all_accounts[v2][1])
             del all_accounts[k]
-    print(party_b_account)
-    print(temp)
-    print(all_accounts)
-    print()
+    print("party_b_account:", party_b_account)
+    print("temp:", temp)
+    for k in temp:
+        if k in all_accounts:
+            del all_accounts[k]
+    print("can't found:", all_accounts)
+    is_write = input("数据处理已完成，是否保存？(y/n):")
+    if is_write == "y":
+        save_data(account_current_path, party_b_account)
+
+
+# 保存到本地
+def save_data(account_current_path, data):
+    wb = openpyxl.load_workbook(account_current_path)
+    ws = wb[SHEET_NAME]
+    for k, v in data.items():
+        ws[TARGET_COMPANY_A+str(k)] = v[0]
+        ws[TARGET_COMPANY_B+str(k)] = v[1]
+        ws[TARGET_MONEY+str(k)] = v[2]
+    wb.save(account_current_path)
+    print("over!!!!!!!!!!!!")
 
 
 # 检查文件/文件夹是否存在
