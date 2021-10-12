@@ -15,7 +15,7 @@ import conf.constant as constant
 # ===================================== 一般情况，仅需修改如下参数，因为每个月的文件目录/文件名都会变化
 
 # 根路径，所有代码，excel 的所在路径
-ROOT_PATH = "F:\\xing\\excelTools\\"
+ROOT_PATH = "D:\\excelTools\\"
 
 # PBC集合，包含很多文件夹，该路径下所有 excel 都会被拷贝到目标路径
 SOURCE_PATH = "source\\source-202104"
@@ -125,7 +125,7 @@ def get_name_from_summary_table(sheet_name=SUMMARY_SHEET, usecols=SPECIFIC_COL):
 
     # 用公司ID和简称拼接出完整的简表名称
     for com_id, com_name in zip(company_id, company_short):
-        standard_simple_tables[com_id] = PBC_PREFIX + "-" + com_id + com_name + "-" +TABLE_SUFFIX
+        standard_simple_tables[com_id] = PBC_PREFIX + "-" + com_id + com_name + "-" + TABLE_SUFFIX
     print(standard_simple_tables, end="\n\n")
 
     # 检测是否能找到对应的简表

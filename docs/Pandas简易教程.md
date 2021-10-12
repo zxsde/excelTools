@@ -102,8 +102,10 @@ df.applymap(lambda x:"%.2f" % x), # 将DataFrame中所有的值保留两位小�
 ### dropna 参数介绍，
 用法如下：
 ```python
+# 只取 0, 1 行，并且删除为空的列
 data.iloc[[0, 1]].dropna(axis=1, how='any')
 ```
+
 参数介绍
 > 1. axis，按哪条轴删除，axis=0 表示按行删(默认)，axis=1 表示按列删。
 > 2. how，删除条件，how='any' 表示只要存在 NaN 就删除(默认)，how='all' 表示全部为 NaN 就删除。
@@ -111,6 +113,36 @@ data.iloc[[0, 1]].dropna(axis=1, how='any')
 > 4. subset，子集，对指定的列进行删除，如 subset=["age", "sex"]。
 > 5. inplace 表示原地替换，inplace=True 表示在元数据上直接更改。
 > 6. notnull 也可以实现删除，参考 [pandas 的 notnull() 的返回非空值函数的用法](https://www.cnblogs.com/cgmcoding/p/13498229.html)
+
+
+参考
+[pandas 小技巧——dataframe、series如何删除指定列中有空值的行+如何删除多列都为空的行](https://blog.csdn.net/lanyuelvyun/article/details/111992087)
+[Python pandas 删除指定行/列数据](https://blog.csdn.net/p1306252/article/details/114890550)
+
+### 删除/选取某列含有特殊数值的行
+
+```python
+# 选取 data 中 "C" 列包含数字 0 的行，然后取反
+data = data[~data["C"].isin([0])]
+```
+
+### 删除/选取某行含有特殊数值的列
+
+```python
+#删除/选取某行含有特定数值的列
+cols=[x for i,x in enumerate(df2.columns) if df2.iat[0,i]==3]
+#利用enumerate对row0进行遍历，将含有数字3的列放入cols中
+print(cols)
+  
+#df2=df2[cols]  选取含有特定数值的列
+df2=df2.drop(cols,axis=1) #利用drop方法将含有特定数值的列删除
+print(df2)
+```
+
+参考：
+[pandas.DataFrame删除/选取含有特定数值的行或列实例](https://www.jb51.net/article/150302.htm)
+[在pandas数据框架中删除所有为零的行](https://www.cnpython.com/qa/26220)
+
 
 ### 修改公式
 
@@ -146,3 +178,9 @@ def just_open(filename):
 
 
 参考：[python 处理excel踩过的坑——data_only，公式全部丢失](# https://www.cnblogs.com/vhills/p/8327918.html)
+
+
+### DataFrame 拼接
+pandas.concat默认纵向连接DataFrame对象，合并之后不改变每个DataFrame子对象的index值，横向合并可用 pandas.concat([df1, df2], axis=1)
+如果两个 sheet 的列数不同，合并后以列数多的为准，短缺的列数用 NaN 填充，如果只想合并相同的列，可用 pandas.concat([df1, df2], join='inner')。
+参考： [pandas中concat()的用法](https://zhuanlan.zhihu.com/p/69224745)

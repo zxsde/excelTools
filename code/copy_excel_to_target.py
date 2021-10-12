@@ -7,21 +7,21 @@ import sys
 """##############      一般情况，仅需修改如下参数，每个季度的用不同的文件夹      ##############"""
 
 # PBC集合，包含很多文件夹，该路径下所有 excel 都会被拷贝到目标路径
-SOURCE_PATH = "source\\source-202109"
+SOURCE_PATH = "source\\source-202104"
 
 # PBC 目录，所有 PBC 表都将被拷贝到这里
-ALL_PBC_PATH = "target\\result-202109\\all_PBC"
+ALL_PBC_PATH = "target\\result-202104\\all_PBC"
 
 # PRC目录，所有 PRC 表都将被拷贝到这里
-ALL_PRC_PATH = "target\\result-202109\\all_PRC"
+ALL_PRC_PATH = "target\\result-202104\\all_PRC"
 
 # 非 PBC 和 PRC 开头的文件被拷贝到这里
-OTHER_FILE_PATH = "target\\result-202109\\other"
+OTHER_FILE_PATH = "target\\result-202104\\other"
 
 """##############      一般情况，仅需修改如上参数，每个季度的用不同的文件夹      ##############"""
 
 # 根路径，项目所在的目录
-ROOT_PATH = "F:\\xing\\excelTools\\"
+ROOT_PATH = "D:\\excelTools\\"
 
 # PBC 简表名字前缀。
 PBC_PREFIX = "PBC"
@@ -39,8 +39,7 @@ TEMP_PREFIX = ("~$", "~")
 # 检验文件夹是否存在，校验文件类型，统计待拷贝的文件。
 def calculate_pending_file():
     # 源文件夹路径，待处理文件所在的路径
-    # source_absolute_path = os.path.join(ROOT_PATH, SOURCE_PATH)
-    source_absolute_path = "F:\\xing\\excelTools\\source\\4月"
+    source_absolute_path = os.path.join(ROOT_PATH, SOURCE_PATH)
     # 目标路径，PBC 表将要拷贝到的路径
     target_pbc_path = os.path.join(ROOT_PATH, ALL_PBC_PATH)
     # 目标路径，PRC 表将要拷贝到的路径
