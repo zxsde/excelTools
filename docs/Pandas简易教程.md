@@ -184,3 +184,5 @@ def just_open(filename):
 pandas.concat默认纵向连接DataFrame对象，合并之后不改变每个DataFrame子对象的index值，横向合并可用 pandas.concat([df1, df2], axis=1)
 如果两个 sheet 的列数不同，合并后以列数多的为准，短缺的列数用 NaN 填充，如果只想合并相同的列，可用 pandas.concat([df1, df2], join='inner')。
 参考： [pandas中concat()的用法](https://zhuanlan.zhihu.com/p/69224745)
+
+[pandas中concat(), append(), merge()的区别和用法](https://zhuanlan.zhihu.com/p/70438557)

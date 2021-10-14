@@ -9,24 +9,8 @@ import pandas
 from tqdm import tqdm
 
 """
-使用方式：
-1. 新建一个文件夹 "handle_excel"
-2. 把该脚本拷贝到文件夹 "handle_excel" 下
-3. 在文件夹 "handle_excel" 中再新建一个文件夹 "source"
-4. 把你要处理的文件连同文件夹整个拷贝到 "source" 中
-
-目录结构如下：
-+--handle_excel
-|      +--merge_excel.py
-|      +--source
-|      |      +--1.烟草xxx有限公司
-|      |      |      +--1.1烟草xxx有限公司
-|      |      |      |      +--PRC-烟草xxx有限公司.xlsx
-|      |      |      |      +--PRC-烟草xxx有限公司.xlsx
-|      |      |      +--1.2烟草xxx有限公司
-|      |      +--2.烟草xxx有限公司
-|      |      |      +--PRC-烟草xxx有限公司.xlsx
-|      |      |      +--PRC-烟草xxx有限公司.xlsx
+功能：合并 Sheet
+描述：把 all_PBC 目录下所有 excel 中 Sheet "表7-内部关联往来" 合并起来，并删除 "调整后" 列为 0/空 的行
 """
 
 # ===================================== 一般情况，仅需修改如下参数，因为每个月的文件目录/文件名都会变化
@@ -37,14 +21,17 @@ ROOT_PATH = "D:\\excelTools\\"
 # PBC 目录，所有 PBC 表所在的路径
 ALL_PBC_PATH = "target\\result-202104\\all_PBC"
 
-# 总表的路径
+# 合并完后 excel 的保存路径
 SUMMARY_TABLE_PATH = "target\\result-202104\\summary_table"
 
-# 总表的路径
-RESULT_EXCEL = "result.xlsx"
+# 合并完后 excel 的名字
+RESULT_EXCEL = "merge_sheet.xlsx"
 
-# 从第几行开始处理，有的表会空两行，第三行才是表头
+# 跨过每张 sheet 的前几行，有的表会空两行，第三行才是表头
 OFFSET = 2
+
+# 要过滤的值
+FILTER = ["", 0]
 
 # 指定不为空的列，该列为空的行会被删除
 SPECIFIC_COL = "调整后"
@@ -66,7 +53,7 @@ pending_merge_sheets = [
     "表7-内部关联往来",
 ]
 
-# 所有的 excel
+# 所有的 excel，包含绝对路径和 excel 名
 all_pbc = []
 
 # 合并后的数据
@@ -85,7 +72,7 @@ def get_all_pbc():
             # 非 excel 不统计
             if not file.endswith(EXCEL_SUFFIX):
                 continue
-            # 构造文件的相对路径
+            # 构造文件的绝对路径
             file_path = os.path.join(root, file)
             all_pbc.append(file_path)
             # print(file_name)
@@ -93,7 +80,7 @@ def get_all_pbc():
     print(all_pbc)
 
 
-# 合并所有 excel 的指定表
+# 合并所有 excel 的指定 Sheet
 def merge_sheet():
     dfs = []
     for sheet_name in pending_merge_sheets:
@@ -101,13 +88,14 @@ def merge_sheet():
         for file in tqdm(all_pbc):
             # 跳过 OFFSET 行后，data 的第 0 行实际上是 excel 中的第 OFFSET 行
             data = pandas.read_excel(file, sheet_name=sheet_name, skiprows=OFFSET)
-            # 选取 data 中 "调整后" 列包含数字 0 的行，然后取反
+            # 选取 data 中 "调整后" 列为空和 0 的行，然后取反
             # 删除指定列为空的行可以用 data = df.dropna(subset=["调整后"], axis=0, how='any')
-            data = data[~data[SPECIFIC_COL].isin([0])]
-            data["source excel"] = file
+            data = data[~data[SPECIFIC_COL].isin(FILTER)]
+            data["source"] = file
             # concat默认纵向连接DataFrame对象，并且合并之后不改变每个DataFrame子对象的index值
             dfs = pandas.concat([dfs, data])
         merged_sheets.append(dfs)
+
     is_write = input("数据处理已完成，是否保存到 %s ？(y/n):" % RESULT_EXCEL)
     if is_write == "y":
         result_excel = os.path.join(ROOT_PATH, SUMMARY_TABLE_PATH, RESULT_EXCEL)
