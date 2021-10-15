@@ -139,6 +139,8 @@ df2=df2.drop(cols,axis=1) #利用drop方法将含有特定数值的列删除
 print(df2)
 ```
 
+过滤空值用 用 numpy.NaN，pandas 读取到 excel 中的空值就是 NaN
+
 参考：
 [pandas.DataFrame删除/选取含有特定数值的行或列实例](https://www.jb51.net/article/150302.htm)
 [在pandas数据框架中删除所有为零的行](https://www.cnpython.com/qa/26220)

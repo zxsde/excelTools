@@ -7,6 +7,7 @@ import shutil
 import pandas
 
 from tqdm import tqdm
+from numpy import NaN
 
 """
 功能：合并 Sheet
@@ -30,8 +31,8 @@ RESULT_EXCEL = "merge_sheet.xlsx"
 # 跨过每张 sheet 的前几行，有的表会空两行，第三行才是表头
 OFFSET = 2
 
-# 要过滤的值
-FILTER = ["", 0]
+# 要过滤的值，如果需要过滤空值，可以用 numpy.NaN
+FILTER = [0]
 
 # 指定不为空的列，该列为空的行会被删除
 SPECIFIC_COL = "调整后"
@@ -50,7 +51,7 @@ pending_merge_sheets = [
     # "表1.3-其他应收款账龄分析",
     # "表1.6-其他应付款账龄分析",
     # "表1.7-预收账款账龄分析"
-    "表7-内部关联往来",
+    "内部往来",
 ]
 
 # 所有的 excel，包含绝对路径和 excel 名
@@ -60,6 +61,7 @@ all_pbc = []
 merged_sheets = []
 
 
+# 从 all_PBC 下获取所有的表
 def get_all_pbc():
     all_pbc_path = os.path.join(ROOT_PATH, ALL_PBC_PATH)
     print("all_pbc: \n", all_pbc_path, end="\n\n")
@@ -76,8 +78,10 @@ def get_all_pbc():
             file_path = os.path.join(root, file)
             all_pbc.append(file_path)
             # print(file_name)
-    print("扫描到 %s 个 excel 文件，请确认是否准确" % (len(all_pbc)))
-    print(all_pbc)
+    print("扫描到 %s 个 excel 文件:\n %s" % (len(all_pbc), all_pbc), end="\n\n")
+    is_merge = input("确认文件个数是否正确，是否开始合并 Sheet \"%s\" ？(y/n):" % SPECIFIC_COL)
+    if is_merge == "y":
+        merge_sheet()
 
 
 # 合并所有 excel 的指定 Sheet
@@ -119,9 +123,10 @@ def is_exist(file, is_mkdir=False, is_rm=False):
         print("file not exist: %s" % file)
         sys.exit(0)
 
-    # 文件不存在且需要创建文件，可以递归创建目录
+    # 文件不存在且需要创建文件夹
     elif not os.path.exists(file) and is_mkdir:
         os.makedirs(file)
+        print("create folder success: %s" % file)
 
     # 文件存在且需要删除文件，可以删除所有文件/文件夹
     elif os.path.exists(file) and is_rm:
@@ -130,6 +135,3 @@ def is_exist(file, is_mkdir=False, is_rm=False):
 
 if __name__ == '__main__':
     get_all_pbc()
-    merge_sheet()
-
-

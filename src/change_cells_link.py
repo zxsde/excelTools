@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 
-import sys
 import os
+import sys
 
+import shutil
 import pandas
 import openpyxl
 
@@ -15,7 +16,7 @@ import conf.constant as constant
 """
 功能：批量修改公式
 描述：第一列是科目，第一行是公司编码，第二行是公司简称，对每个公司，计算其科目的公式
-     比如连接到其他 excel 单元格，相加，求和
+     比如连接到其他 excel 单元格，或相加，或求和
 """
 
 # ===================================== 一般情况，仅需修改如下参数，因为每个月的文件目录/文件名都会变化
@@ -41,7 +42,7 @@ SUMMARY_TABLE_NAME = "合并报表202104.xlsx"
 # PBC 简表名字后缀
 TABLE_SUFFIX = "202104.xlsx"
 
-# 汇总表中指定被处理的列，如果所有列都需要处理，则改为 None
+# 汇总表中指定被处理的列，如果所有列都需要处理，则设为 None
 SPECIFIC_COL = "A:B,G:J"
 
 # 公司清单表
@@ -61,8 +62,8 @@ EXCEL_SUFFIX = ("xlsx", "xlsm", "xls")
 # 临时文件前缀，不处理该前缀的文件，该前缀一般是临时文件，如已打开的 excel 会额外生成一个额 ~ 开头的文件
 TEMP_PREFIX = ("~$", "~")
 
-# 汇总表中科目所在的列，目前仅支持 'A' - 'Z'
-TITLE_COL = 'B'
+# 汇总表中科目所在的列，不是 excel 中的列，是在 SPECIFIC_COL 的第几列
+TITLE_COL = 2
 
 # 简表需要合并的 sheet 名
 SIMPLE_SHEET = "test1"
@@ -138,7 +139,9 @@ def get_name_from_summary_table(sheet_name=SUMMARY_SHEET, usecols=SPECIFIC_COL):
     excel_not_exist = set(standard_simple_tables.values()) - set(simple_tables.keys())
     print("%s excels can't found:\n %s" % (len(excel_not_exist), excel_not_exist), end="\n\n")
 
-    cal_formulae(data, company_id)
+    is_continue = input("请检查是否所有简表都存在，开始计算公式？(y/n):")
+    if is_continue == "y":
+        cal_formulae(data, company_id)
 
 
 # 计算各科目和公司对应单元格的公式
@@ -155,8 +158,8 @@ def cal_formulae(data, company_id) -> dict:
         col = convert_to_column(i + 1)
         # 遍历每一行，计算各科目的公式
         for row in data.itertuples():
-            # 所有科目都在第二列
-            account_title = row[ord(TITLE_COL) - ord('A') + 1]
+            # 所有科目都在第 TITLE_COL 列
+            account_title = row[TITLE_COL]
             # 为空时候获取到的是 float 格式的 nan ，直接跳过，我们只解析字符串
             if not isinstance(account_title, str):
                 continue
@@ -182,13 +185,16 @@ def cal_formulae(data, company_id) -> dict:
                 cell_formulae[cell] = "={}".format(formulae)
 
     print("%s formulae \n %s" % (len(cell_formulae), cell_formulae), end="\n\n")
-    return cell_formulae
+    is_write = input("公式计算完成，是否保存到 %s ？(y/n):" % SUMMARY_TABLE_NAME)
+    if is_write == "y":
+        summary_table_path = os.path.join(ROOT_PATH, SUMMARY_TABLE_PATH, SUMMARY_TABLE_NAME)
+        is_exist(summary_table_path)
+        print("saving data, the waiting time might be significant, please wait......")
+        write_formulae(summary_table_path)
 
 
 # 写入公式
-def write_formulae():
-    summary_table_path = os.path.join(ROOT_PATH, SUMMARY_TABLE_PATH, SUMMARY_TABLE_NAME)
-    print("summary table path: \n", summary_table_path, end="\n\n")
+def write_formulae(summary_table_path):
     wb = openpyxl.load_workbook(summary_table_path)
     ws = wb[SUMMARY_SHEET]
     for k, v in tqdm(cell_formulae.items()):
@@ -196,7 +202,7 @@ def write_formulae():
     wb.save(summary_table_path)
     print("write formulae success, reopen the excel, please wait......")
 
-    # 重新打开一次 excel
+    # 重新打开一次 excel，否则可能不显示公式计算结果
     just_open(summary_table_path)
     print("over!!!!!!!!!!!!")
 
@@ -233,6 +239,21 @@ def get_formulae(column: str, s: str) -> str:
     return "".join(formulae)
 
 
+# 检查文件/文件夹是否存在
+def is_exist(file, is_mkdir=False, is_rm=False):
+    # 文件不存在且不需要创建文件，直接退出
+    if not os.path.exists(file) and not is_mkdir:
+        print("file not exist: %s" % file)
+        sys.exit(0)
+
+    # 文件不存在且需要创建文件，可以递归创建目录
+    elif not os.path.exists(file) and is_mkdir:
+        os.makedirs(file)
+
+    # 文件存在且需要删除文件，可以删除所有文件/文件夹
+    elif os.path.exists(file) and is_rm:
+        shutil.rmtree(file)
+
+
 if __name__ == '__main__':
     get_name_from_summary_table()
-    # write_formulae()
