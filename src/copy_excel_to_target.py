@@ -1,9 +1,11 @@
 #!/usr/bin/python3
 
-import shutil
 import os
 import sys
 
+import shutil
+
+import conf.common_utils as commons_utils
 
 """
 功能：拷贝 excel
@@ -14,7 +16,7 @@ import sys
 # ===================================== 一般情况，仅需修改以下参数，根据实际情况进行修改
 
 # 根路径，项目所在的目录
-ROOT_PATH = "D:\\excelTools\\"
+ROOT_PATH = "E:\\excelTools\\"
 
 # PBC集合，包含很多文件夹，该路径下所有 excel 都会被拷贝到目标路径
 SOURCE_PATH = "source\\source-202104"
@@ -28,7 +30,7 @@ ALL_PRC_PATH = "target\\result-202104\\all_PRC"
 # 非 PBC 和 PRC 开头的文件被拷贝到这里
 OTHER_FILE_PATH = "target\\result-202104\\other"
 
-# ===================================== 一般情况，仅需修改以上参数，因为每个月的文件目录/文件名都会变化
+# ===================================== 一般情况，仅需修改以上参数，根据实际情况进行修改
 
 # PBC 简表名字前缀。
 PBC_PREFIX = "PBC"
@@ -57,26 +59,15 @@ def calculate_pending_file():
             source_absolute_path, target_pbc_path, target_prc_path, target_other_path), end="\n\n")
 
     # 如果根目录不存在，结束
-    if not os.path.exists(ROOT_PATH):
-        print("root path not exist,you should create %s first" % ROOT_PATH)
-        sys.exit(0)
-
+    commons_utils.is_exist(ROOT_PATH)
     # 如果源目录不存在，结束
-    if not os.path.exists(source_absolute_path):
-        print("source folder not exist,you should create %s first" % source_absolute_path)
-        sys.exit(0)
-
+    commons_utils.is_exist(source_absolute_path)
     # 如果 all_PBC 目录不存在，创建文件夹，删除用 shutil.rmtree(path)
-    if not os.path.exists(target_pbc_path):
-        os.makedirs(target_pbc_path)
-
+    commons_utils.is_exist(target_pbc_path, True)
     # 如果 all_PRC 目录不存在，创建文件夹。
-    if not os.path.exists(target_prc_path):
-        os.makedirs(target_prc_path)
-
+    commons_utils.is_exist(target_prc_path, True)
     # 如果 other 目录不存在，创建文件夹。
-    if not os.path.exists(target_other_path):
-        os.makedirs(target_other_path)
+    commons_utils.is_exist(target_other_path, True)
 
     existing_pbc = []
     existing_prc = []

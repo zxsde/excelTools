@@ -1,12 +1,11 @@
 #!/usr/bin/python3
 
 import os
-import sys
 
-import shutil
 import pandas
 import openpyxl
 
+import conf.common_utils as commons_utils
 
 """
 功能：核对往来账款差异
@@ -17,7 +16,7 @@ import openpyxl
 # ===================================== 一般情况，仅需修改如下参数，根据实际情况进行修改
 
 # 根路径，所有代码，excel 的所在路径
-ROOT_PATH = "f:\\xing\\excelTools\\"
+ROOT_PATH = "E:\\excelTools\\"
 
 # 往来账款表所在路径
 ACCOUNT_CURRENT_PATH = "target\\result-202104\\summary_table"
@@ -37,14 +36,14 @@ ATOB_A, ATOB_B, ATOB_MONEY = "E", "F", "G"
 # (分公司B, 分公司A, -100万) 将要保存的列
 BTOA_A, BTOA_B, BTOA_MONEY = "I", "J", "K"
 
-# ===================================== 一般情况，仅需修改以上参数，因为每个月的文件目录/文件名都会变化
+# ===================================== 一般情况，仅需修改以上参数，根据实际情况进行修改
 
 
 # 核对往来账款，对每项 (分公司A, 分公司B, 100万) 找到其对应的 (分公司B, 分公司A, -100万)，保存到指定的列
 def diff_account_current():
     account_current_path = os.path.join(ROOT_PATH, ACCOUNT_CURRENT_PATH, ACCOUNT_CURRENT)
     print("account_current_path: \n", account_current_path, end="\n\n")
-    is_exist(account_current_path)
+    commons_utils.is_exist(account_current_path)
     data = pandas.read_excel(account_current_path, sheet_name=SHEET_NAME, usecols=SPECIFIC_COL, header=None)
     # 删除空行
     data = data.dropna(axis=0, how='all')
@@ -92,22 +91,6 @@ def save_data(account_current_path, a_to_b, b_to_a):
         ws[BTOA_MONEY+str(k)] = v[2]
     wb.save(account_current_path)
     print("over!!!!!!!!!!!!")
-
-
-# 检查文件/文件夹是否存在
-def is_exist(file, is_mkdir=False, is_rm=False):
-    # 文件不存在且不需要创建文件，直接退出
-    if not os.path.exists(file) and not is_mkdir:
-        print("file not exist: %s" % file)
-        sys.exit(0)
-
-    # 文件不存在且需要创建文件，可以递归创建目录
-    elif not os.path.exists(file) and is_mkdir:
-        os.makedirs(file)
-
-    # 文件存在且需要删除文件，可以删除所有文件/文件夹
-    elif os.path.exists(file) and is_rm:
-        shutil.rmtree(file)
 
 
 if __name__ == '__main__':

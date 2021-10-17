@@ -7,6 +7,13 @@ data = pandas.read_excel(path, sheet_name, usecols, header)
 
 pandas.read_excel 参数有很多，后续再补充。pandas.read_excel 读取出来的是 DataFrame 格式的数据，下面看一些常用的方法。
 
+
+### read_excel
+
+pandas.read_excel 参数介绍
+
+
+
 ### 对 DataFrame 提取行数据
 1. 用标签 loc 定位行(location), 
 ```python
@@ -126,6 +133,7 @@ data.iloc[[0, 1]].dropna(axis=1, how='any')
 data = data[~data["C"].isin([0])]
 ```
 
+## 过滤数据
 ### 删除/选取某行含有特殊数值的列
 
 ```python
@@ -140,6 +148,7 @@ print(df2)
 ```
 
 过滤空值用 用 numpy.NaN，pandas 读取到 excel 中的空值就是 NaN
+删除指定列为空的行可以用 data = df.dropna(subset=["调整后"], axis=0, how='any')
 
 参考：
 [pandas.DataFrame删除/选取含有特定数值的行或列实例](https://www.jb51.net/article/150302.htm)

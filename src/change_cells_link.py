@@ -3,14 +3,13 @@
 import os
 import sys
 
-import shutil
 import pandas
 import openpyxl
-
 from win32com.client import Dispatch
 from tqdm import tqdm
 
 import conf.constant as constant
+import conf.common_utils as commons_utils
 
 
 """
@@ -19,10 +18,10 @@ import conf.constant as constant
      比如连接到其他 excel 单元格，或相加，或求和
 """
 
-# ===================================== 一般情况，仅需修改如下参数，因为每个月的文件目录/文件名都会变化
+# ===================================== 一般情况，仅需修改如下参数，根据实际情况进行修改
 
 # 根路径，所有代码，excel 的所在路径
-ROOT_PATH = "D:\\excelTools\\"
+ROOT_PATH = "E:\\excelTools\\"
 
 # PBC集合，包含很多文件夹，该路径下所有 excel 都会被拷贝到目标路径
 SOURCE_PATH = "source\\source-202104"
@@ -48,7 +47,7 @@ SPECIFIC_COL = "A:B,G:J"
 # 公司清单表
 COMPANY_LIST = "公司清单-202104苹果.xlsx"
 
-# ===================================== 一般情况，仅需修改以上参数，因为每个月的文件目录/文件名都会变化
+# ===================================== 一般情况，仅需修改以上参数，根据实际情况进行修改
 
 # PBC 简表名字前缀。
 PBC_PREFIX = "PBC简表"
@@ -188,7 +187,7 @@ def cal_formulae(data, company_id) -> dict:
     is_write = input("公式计算完成，是否保存到 %s ？(y/n):" % SUMMARY_TABLE_NAME)
     if is_write == "y":
         summary_table_path = os.path.join(ROOT_PATH, SUMMARY_TABLE_PATH, SUMMARY_TABLE_NAME)
-        is_exist(summary_table_path)
+        commons_utils.is_exist(summary_table_path)
         print("saving data, the waiting time might be significant, please wait......")
         write_formulae(summary_table_path)
 
@@ -237,22 +236,6 @@ def get_formulae(column: str, s: str) -> str:
             formulae.append(column)
         formulae.append(s[i])
     return "".join(formulae)
-
-
-# 检查文件/文件夹是否存在
-def is_exist(file, is_mkdir=False, is_rm=False):
-    # 文件不存在且不需要创建文件，直接退出
-    if not os.path.exists(file) and not is_mkdir:
-        print("file not exist: %s" % file)
-        sys.exit(0)
-
-    # 文件不存在且需要创建文件，可以递归创建目录
-    elif not os.path.exists(file) and is_mkdir:
-        os.makedirs(file)
-
-    # 文件存在且需要删除文件，可以删除所有文件/文件夹
-    elif os.path.exists(file) and is_rm:
-        shutil.rmtree(file)
 
 
 if __name__ == '__main__':
