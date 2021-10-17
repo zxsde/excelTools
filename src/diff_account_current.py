@@ -16,25 +16,25 @@ import conf.common_utils as commons_utils
 # ===================================== 一般情况，仅需修改如下参数，根据实际情况进行修改
 
 # 根路径，所有代码，excel 的所在路径
-ROOT_PATH = "E:\\excelTools\\"
+ROOT_PATH = "D:\\excelTools\\"
 
 # 往来账款表所在路径
-ACCOUNT_CURRENT_PATH = "target\\result-202104\\summary_table"
+ACCOUNT_CURRENT_PATH = "target\\result-202109\\summary_table"
 
 # 往来账款表
-ACCOUNT_CURRENT = "往来账款.xlsx"
+ACCOUNT_CURRENT = "merge_sheet.xlsx"
 
-# Sheet 页
-SHEET_NAME = "test1"
+# 要处理的 Sheet 页
+SHEET_NAME = "Sheet1"
 
-# 将要处理哪几列，因为不一定所有的列都需要进行处理，如下就是只会处理 "A,B,C" 三列
-SPECIFIC_COL = "A,B,C"
+# 将要处理哪几列，因为不一定所有的列都需要进行处理，如下就是只会处理 "D,E,G" 三列
+SPECIFIC_COL = "D,E,G"
 
 # (分公司A, 分公司B, 100万) 将要保存的列
-ATOB_A, ATOB_B, ATOB_MONEY = "E", "F", "G"
+ATOB_A, ATOB_B, ATOB_MONEY = "I", "J", "K"
 
 # (分公司B, 分公司A, -100万) 将要保存的列
-BTOA_A, BTOA_B, BTOA_MONEY = "I", "J", "K"
+BTOA_A, BTOA_B, BTOA_MONEY = "M", "N", "O"
 
 # ===================================== 一般情况，仅需修改以上参数，根据实际情况进行修改
 
@@ -44,7 +44,7 @@ def diff_account_current():
     account_current_path = os.path.join(ROOT_PATH, ACCOUNT_CURRENT_PATH, ACCOUNT_CURRENT)
     print("account_current_path: \n", account_current_path, end="\n\n")
     commons_utils.is_exist(account_current_path)
-    data = pandas.read_excel(account_current_path, sheet_name=SHEET_NAME, usecols=SPECIFIC_COL, header=None)
+    data = pandas.read_excel(account_current_path, sheet_name=SHEET_NAME, usecols=SPECIFIC_COL)
     # 删除空行
     data = data.dropna(axis=0, how='all')
     print(data)
@@ -80,15 +80,16 @@ def diff_account_current():
 def save_data(account_current_path, a_to_b, b_to_a):
     wb = openpyxl.load_workbook(account_current_path)
     ws = wb[SHEET_NAME]
+    # 有表头的情况下，DataFrame 中的第 0 行实际是 excel 中的第 1 行，所以要加 1
     for k, v in a_to_b.items():
-        ws[ATOB_A+str(k)] = v[0]
-        ws[ATOB_B+str(k)] = v[1]
-        ws[ATOB_MONEY+str(k)] = v[2]
+        ws[ATOB_A + str(k + 1)] = v[0]
+        ws[ATOB_B + str(k + 1)] = v[1]
+        ws[ATOB_MONEY + str(k + 1)] = v[2]
 
     for k, v in b_to_a.items():
-        ws[BTOA_A+str(k)] = v[0]
-        ws[BTOA_B+str(k)] = v[1]
-        ws[BTOA_MONEY+str(k)] = v[2]
+        ws[BTOA_A + str(k + 1)] = v[0]
+        ws[BTOA_B + str(k + 1)] = v[1]
+        ws[BTOA_MONEY + str(k + 1)] = v[2]
     wb.save(account_current_path)
     print("over!!!!!!!!!!!!")
 

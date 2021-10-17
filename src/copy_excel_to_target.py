@@ -9,7 +9,7 @@ import conf.common_utils as commons_utils
 
 """
 功能：拷贝 excel
-描述：source-202104 目录下有很多不同层级的 excel，把所有 PBC 表拷贝到 all_PBC 文件夹下，
+描述：source-202109 目录下有很多不同层级的 excel，把所有 PBC 表拷贝到 all_PBC 文件夹下，
     把所有 PRC 表拷贝到 all_PRC 文件夹下，把无法识别的表拷贝到 other 文件夹下。 
 """
 
@@ -19,16 +19,16 @@ import conf.common_utils as commons_utils
 ROOT_PATH = "E:\\excelTools\\"
 
 # PBC集合，包含很多文件夹，该路径下所有 excel 都会被拷贝到目标路径
-SOURCE_PATH = "source\\source-202104"
+SOURCE_PATH = "source\\source-202109"
 
 # PBC 目录，所有 PBC 表都将被拷贝到这里
-ALL_PBC_PATH = "target\\result-202104\\all_PBC"
+ALL_PBC_PATH = "target\\result-202109\\all_PBC"
 
 # PRC目录，所有 PRC 表都将被拷贝到这里
-ALL_PRC_PATH = "target\\result-202104\\all_PRC"
+ALL_PRC_PATH = "target\\result-202109\\all_PRC"
 
 # 非 PBC 和 PRC 开头的文件被拷贝到这里
-OTHER_FILE_PATH = "target\\result-202104\\other"
+OTHER_FILE_PATH = "target\\result-202109\\other"
 
 # ===================================== 一般情况，仅需修改以上参数，根据实际情况进行修改
 

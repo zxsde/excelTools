@@ -24,28 +24,28 @@ import conf.common_utils as commons_utils
 ROOT_PATH = "E:\\excelTools\\"
 
 # PBC集合，包含很多文件夹，该路径下所有 excel 都会被拷贝到目标路径
-SOURCE_PATH = "source\\source-202104"
+SOURCE_PATH = "source\\source-202109"
 
 # PBC 目录，所有 PBC 表都将被拷贝到这里
-ALL_PBC_PATH = "target\\result-202104\\all_PBC"
+ALL_PBC_PATH = "target\\result-202109\\all_PBC"
 
 # PRC目录，所有 PRC 表都将被拷贝到这里
-ALL_PRC_PATH = "target\\result-202104\\all_PRC"
+ALL_PRC_PATH = "target\\result-202109\\all_PRC"
 
 # 总表的路径
-SUMMARY_TABLE_PATH = "target\\result-202104\\summary_table"
+SUMMARY_TABLE_PATH = "target\\result-202109\\summary_table"
 
 # 总表的名称
-SUMMARY_TABLE_NAME = "合并报表202104.xlsx"
+SUMMARY_TABLE_NAME = "合并报表202109.xlsx"
 
 # PBC 简表名字后缀
-TABLE_SUFFIX = "202104.xlsx"
+TABLE_SUFFIX = "202109.xlsx"
 
 # 汇总表中指定被处理的列，如果所有列都需要处理，则设为 None
-SPECIFIC_COL = "A:B,G:J"
+USE_COLS = "A:B,G:J"
 
 # 公司清单表
-COMPANY_LIST = "公司清单-202104苹果.xlsx"
+COMPANY_LIST = "公司清单-202109苹果.xlsx"
 
 # ===================================== 一般情况，仅需修改以上参数，根据实际情况进行修改
 
@@ -61,7 +61,7 @@ EXCEL_SUFFIX = ("xlsx", "xlsm", "xls")
 # 临时文件前缀，不处理该前缀的文件，该前缀一般是临时文件，如已打开的 excel 会额外生成一个额 ~ 开头的文件
 TEMP_PREFIX = ("~$", "~")
 
-# 汇总表中科目所在的列，不是 excel 中的列，是在 SPECIFIC_COL 的第几列
+# 汇总表中科目所在的列，不是 excel 中的列，是在 USE_COLS 的第几列
 TITLE_COL = 2
 
 # 简表需要合并的 sheet 名
@@ -91,7 +91,7 @@ cell_formulae = {}
 
 
 # 从汇总表中获取公司编码和简称，拼接出简表名称，检查是否能找到这些简表
-def get_name_from_summary_table(sheet_name=SUMMARY_SHEET, usecols=SPECIFIC_COL):
+def get_name_from_summary_table(sheet_name=SUMMARY_SHEET, usecols=USE_COLS):
     # 所有 PBC 所在的路径
     pbc_absolute_path = os.path.join(ROOT_PATH, ALL_PBC_PATH)
     # 遍历所有 PBC 简表，保存为  格式
@@ -125,6 +125,7 @@ def get_name_from_summary_table(sheet_name=SUMMARY_SHEET, usecols=SPECIFIC_COL):
     company_short = filter_nan.iloc[1].to_list()
     # 过滤掉公司编码为非字母数字的列
     company_short = [company_short[i] for i in range(len(company_id)) if company_id[i].encode('utf-8').isalnum()]
+    # isalnum 不指定编码的话，汉字也会返回 True
     company_id = [com_id for com_id in company_id if com_id.encode('utf-8').isalnum()]
     print("company_id is: \n %s \n\n company_short_name is:\n %s" % (company_id, company_short), end="\n\n")
     print("%s company_id were recognized, check if it is correct" % len(company_id), end="\n\n")
@@ -144,7 +145,7 @@ def get_name_from_summary_table(sheet_name=SUMMARY_SHEET, usecols=SPECIFIC_COL):
 
 
 # 计算各科目和公司对应单元格的公式
-def cal_formulae(data, company_id) -> dict:
+def cal_formulae(data, company_id):
     print("the data include following columns: \n", data.columns.values, end="\n\n")
     # 所有 PBC 的绝对路径，第三个参数 '' 是为了在文件夹结尾多一个 \ ，否则拼接文件时会把目录连起来
     target_absolute_path = os.path.join(ROOT_PATH, ALL_PBC_PATH, '')

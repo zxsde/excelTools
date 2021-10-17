@@ -16,7 +16,7 @@ import conf.common_utils as commons_utils
 # ===================================== 一般情况，仅需修改如下参数，根据实际情况进行修改
 
 # 根路径，所有代码，excel 的所在路径
-ROOT_PATH = "f:\\xing\\excelTools\\"
+ROOT_PATH = "D:\\excelTools\\"
 
 # PBC 目录，所有 PBC 表所在的路径
 ALL_PBC_PATH = "target\\result-202109\\all_PBC"
