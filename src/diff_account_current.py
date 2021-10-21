@@ -16,7 +16,7 @@ import conf.common_utils as commons_utils
 # ===================================== 一般情况，仅需修改如下参数，根据实际情况进行修改
 
 # 根路径，所有代码，excel 的所在路径
-ROOT_PATH = "D:\\excelTools\\"
+ROOT_PATH = "E:\\excelTools\\"
 
 # 往来账款表所在路径
 ACCOUNT_CURRENT_PATH = "target\\result-202109\\summary_table"
