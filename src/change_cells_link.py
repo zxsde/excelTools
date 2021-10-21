@@ -139,7 +139,7 @@ def get_name_from_summary_table(sheet_name=SUMMARY_SHEET, usecols=USE_COLS):
     excel_not_exist = set(standard_simple_tables.values()) - set(simple_tables.keys())
     print("%s excels can't found:\n %s" % (len(excel_not_exist), excel_not_exist), end="\n\n")
 
-    is_continue = input("请检查是否所有简表都存在，开始计算公式？(y/n):")
+    is_continue = input("\033[1;33m 请检查是否所有简表都存在，开始计算公式？(y/n):")
     if is_continue == "y":
         cal_formulae(data, company_id)
 
@@ -185,7 +185,7 @@ def cal_formulae(data, company_id):
                 cell_formulae[cell] = "={}".format(formulae)
 
     print("%s formulae \n %s" % (len(cell_formulae), cell_formulae), end="\n\n")
-    is_write = input("公式计算完成，是否保存到 %s ？(y/n):" % SUMMARY_TABLE_NAME)
+    is_write = input("\033[1;33m 公式计算完成，是否保存到 %s ？(y/n):" % SUMMARY_TABLE_NAME)
     if is_write == "y":
         summary_table_path = os.path.join(ROOT_PATH, SUMMARY_TABLE_PATH, SUMMARY_TABLE_NAME)
         commons_utils.is_exist(summary_table_path)
@@ -203,8 +203,7 @@ def write_formulae(summary_table_path):
     print("write formulae success, reopen the excel, please wait......")
 
     # 重新打开一次 excel，否则可能不显示公式计算结果
-    just_open(summary_table_path)
-    print("over!!!!!!!!!!!!")
+    print("\033[1;32m" + "Success!!!!!")
 
 
 # 重新打开一次 excel，不然无法计算出公式的值，显示 #REF

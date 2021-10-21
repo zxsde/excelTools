@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import os
+import logging
 
 from tqdm import tqdm
 from openpyxl import load_workbook
@@ -36,14 +37,11 @@ EXCEL_SUFFIX = ("xlsx", "xlsm")
 # 临时文件前缀，不处理该前缀的文件，该前缀一般是临时文件，如已打开的 excel 会额外生成一个额 ~ 开头的文件
 TEMP_PREFIX = ("~$", "~")
 
-# 所有的 excel，包含绝对路径和 excel 名
-all_pbc = []
+# 所有的 excel，格式为 {excel 名: 路径+excel名}
+all_pbc = {}
 
-# 缺失 Sheet 的 excel
-wrong_excel = {}
-
-# Sheet 顺序不对的 excel
-wrong_order = []
+LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
+logging.basicConfig(filename='..\\logs\\check_sheet_name.log', level=logging.DEBUG, format=LOG_FORMAT)
 
 
 # 从 all_PBC 下获取所有的表
@@ -61,18 +59,22 @@ def get_all_pbc():
             # 非 excel 不统计
             if not file.endswith(EXCEL_SUFFIX):
                 continue
-            all_pbc.append(file)
+            file_path = os.path.join(all_pbc_path, root, file)
+            all_pbc[file] = file_path
             # print(file)
     print("扫描到 %s 个 excel 文件(不包含xls)，请核实：\n %s" % (len(all_pbc), all_pbc), end="\n\n")
-    is_check = input("确认文件个数是否正确，是否开始检查？(y/n):")
+    is_check = input("\033[1;33m 确认文件个数是否正确，是否开始检查？(y/n):")
     if is_check == "y":
         check_sheet_name()
 
 
 # 检查所有 excel 是否包含指定 Sheet
 def check_sheet_name():
+    wrong_excel = {}  # 缺失 Sheet 的 excel
+    wrong_order = []  # Sheet 顺序不对的 excel
+
     # 遍历 excel
-    for file in tqdm(all_pbc):
+    for file in tqdm(all_pbc.keys()):
         file_path = os.path.join(ROOT_PATH, ALL_PBC_PATH, file)
         wb = load_workbook(file_path, read_only=True)
         if wb.sheetnames == STANDARD_SHEET:
@@ -83,14 +85,28 @@ def check_sheet_name():
         else:
             wrong_order.append(file)
 
-    if wrong_excel:
-        print("缺失 Sheet 的 excel 如下，请核实： \n %s" % wrong_excel, end="\n\n")
-    else:
-        print("恭喜！！！所有 excel 都包含指定 Sheet", end="\n\n")
     if wrong_order:
-        print("Sheet 存在但顺序不对的 excel 如下，请核实： \n %s" % wrong_order, end="\n\n")
+        print("Sheet 存在但顺序不对的 excel 有 %s 个，如下，请核实： \n %s" % (len(wrong_order), wrong_order), end="\n\n")
     else:
         print("恭喜！！！所有 excel 的 Sheet 顺序也正确", end="\n\n")
+    if wrong_excel:
+        print("缺失 Sheet 的 excel 有 %s 个，如下，请核实： \n %s" % (len(wrong_excel), wrong_excel), end="\n\n")
+        logging.debug(wrong_excel)
+        is_write = input("\033[1;33m 是否对缺失 Sheet 的 excel 创建对应的空 Sheet 页(y/n):")
+        if is_write:
+            write_sheet(wrong_excel)
+    else:
+        print("恭喜！！！所有 excel 都包含指定 Sheet", end="\n\n")
+
+
+# 写入空 Sheet 页
+def write_sheet(wrong_excel):
+    for excel, sheets in wrong_excel.items():
+        wb = load_workbook(all_pbc[excel])
+        for sheet in sheets:
+            wb.create_sheet(sheet)
+        wb.save(all_pbc[excel])
+    print("\033[1;32m" + "Success!!!!!")
 
 
 if __name__ == '__main__':

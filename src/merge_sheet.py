@@ -4,6 +4,7 @@ import os
 import sys
 
 import pandas
+import numpy
 from tqdm import tqdm
 
 import conf.common_utils as commons_utils
@@ -27,9 +28,10 @@ SUMMARY_TABLE_PATH = "target\\result-202109\\summary_table"
 # 合并完后 excel 的名字，重复执行时候建议每次修改名字，因为会覆盖源数据
 RESULT_EXCEL = "merge_sheet.xlsx"
 
-# 要合并的 sheet，支持合并多个
+# 要合并的 sheet，支持多个 Sheet 各自合并
 PENDING_MERGE_SHEETS = [
     "Sheet1",
+    "Sheet2",
 ]
 
 # 黑名单，写在这里的 excel 不会参与合并，为了排除一些个例
@@ -38,7 +40,8 @@ BLACK_LIST = {
 }
 
 # 指定被处理的列，并非所有列都有用，如果所有列都需要处理，则设为 None
-USE_COLS = "B:C,E:F"
+# USE_COLS = "B:C,E:G" 表示只处理 B,C,E,F,G 这几列
+USE_COLS = None
 
 # 表头所在的行，从 0 开始计数，无表头改为 None，一般和 SKIP_ROWS 任选一个配置即可
 HEADER = 2
@@ -46,16 +49,17 @@ HEADER = 2
 # 跳过前几行，有的表会空几行才有数据，跳过之后的第一行为表头
 SKIP_ROWS = 0
 
-# 要过滤的数据，如下会过滤 "金额" 列中为 0 的行，"公司" 列中为 "小计", "内部往来" 的行
-# 如果需要过滤空值，可以用 numpy.NaN，FILTER_SPECIFIC_VALUE 为空不做任何过滤。
+# 要过滤的数据，如下对于 sheet1 会先过滤掉 "金额" 列中为 0 的行，再过滤掉"公司" 列中为 "小计"和"内部往来" 的行，
+# 对于 sheet2 会过滤掉"期末余额"为空的行，不想做任何过滤，把对应的 Sheet 置为空列表。
 FILTER_SPECIFIC_VALUE = {
-    "调整后": [0],  # 置为空列表则不对该列进行过滤
-    "公司": ["小计",
-           "内部往来",
-           ]  # 置为空列表则不对该列进行过滤
+    "Sheet1": {
+        "金额": [0],
+        "公司": ["小计", "内部往来"]
+    },
+    "Sheet2": {
+        "期末余额": [numpy.NaN]
+    },
 }
-
-# 新增一列 source，代表当前行的数据来自哪一个 excel
 
 # ===================================== 一般情况，仅需修改以上参数，根据实际情况进行修改
 
@@ -90,7 +94,7 @@ def get_all_pbc():
             all_pbc.append(file_path)
             # print(file_name)
     print("扫描到 %s 个 excel 文件:\n %s" % (len(all_pbc), all_pbc), end="\n\n")
-    is_merge = input("确认文件个数是否正确，是否开始合并 Sheet %s ？(y/n):" % PENDING_MERGE_SHEETS)
+    is_merge = input("\033[1;33m 确认文件个数是否正确，是否开始合并 Sheet %s ？(y/n):" % PENDING_MERGE_SHEETS)
     if is_merge == "y":
         merge_sheet()
 
@@ -107,11 +111,17 @@ def merge_sheet():
             if file.split("\\")[-1] in BLACK_LIST:
                 continue
             # 跳过 SKIP_ROWS 行后，data 的第 0 行实际上是 excel 中的第 SKIP_ROWS 行
-            data = pandas.read_excel(file, sheet_name=sheet_name, header=HEADER, usecols=USE_COLS, skiprows=SKIP_ROWS)
-            # FILTER 不为空，就过滤掉 data 中 SPECIFIC_COL 列为 FILTER 的行
-            if FILTER_SPECIFIC_VALUE:
-                for col, val in FILTER_SPECIFIC_VALUE.items():
-                    data = data[~data[col].isin(val)]
+            try:
+                data = pandas.read_excel(file,
+                                         sheet_name=sheet_name,
+                                         header=HEADER,
+                                         usecols=USE_COLS,
+                                         skiprows=SKIP_ROWS)
+            except ValueError as Argument:
+                print("\033[1;31m ValueError:%s:\n excel: %s \n" % (Argument, file))
+                sys.exit(0)
+            # 对指定 Sheet，过滤掉指定列为某个值的行
+            data = filter_value(data, file, sheet_name)
             short_name = get_short_name(file)
             # data["shortName"] = short_name
             # data["source"] = file
@@ -121,22 +131,11 @@ def merge_sheet():
             dfs = pandas.concat([dfs, data])
         merged_sheets.append(dfs)
 
-    is_write = input("数据处理已完成，是否保存到 %s ？注意：源数据会被覆盖，请做好备份(y/n):" % RESULT_EXCEL)
+    is_write = input("\033[1;33m 数据处理已完成，是否保存到 %s ？注意：源数据会被覆盖，请做好备份(y/n):" % RESULT_EXCEL)
     if is_write == "y":
         result_excel = os.path.join(ROOT_PATH, SUMMARY_TABLE_PATH, RESULT_EXCEL)
         print("saving data, please wait......")
         sava_file(result_excel, merged_sheets)
-
-
-# 从 excel 全称中截取公司简称
-def get_short_name(com_name):
-    short_name = []
-    com_name = com_name.split("\\")[-1].split("-")[1]  # 切割后公司简称所在的下标是 1
-    # com_name = unicode(com_name, 'utf-8')
-    for c in com_name:
-        if "\u4e00" <= c <= "\u9fa5":
-            short_name.append(c)
-    return "".join(short_name)
 
 
 # 保存到本地
@@ -144,7 +143,31 @@ def sava_file(result, data):
     with pandas.ExcelWriter(result) as writer:
         for i in tqdm(range(len(data))):
             data[i].to_excel(writer, sheet_name=PENDING_MERGE_SHEETS[i])
-    print("over!!!!!")
+    print("\033[1;32m" + "Success!!!!!")
+
+
+# 过滤掉符合条件的行，对指定 Sheet 的指定列为指定值的行进行过滤
+def filter_value(data, file, sheet_name):
+    if sheet_name not in FILTER_SPECIFIC_VALUE:
+        return data
+    for col, val in FILTER_SPECIFIC_VALUE[sheet_name].items():
+        try:
+            data = data[~data[col].isin(val)]
+        except KeyError as Argument:
+            print("\033[1;31m KeyError:%s:\n excel: %s \n Sheet: %s" % (Argument, file, sheet_name))
+            sys.exit(0)
+    return data
+
+
+# 从 excel 全称中截取公司简称
+def get_short_name(com_name):
+    short_name = []
+    com_name = com_name.split("\\")[-1]  # 切割后公司简称所在的下标是 1
+    # com_name = unicode(com_name, 'utf-8')
+    for c in com_name:
+        if "\u4e00" <= c <= "\u9fa5":
+            short_name.append(c)
+    return "".join(short_name)
 
 
 if __name__ == '__main__':

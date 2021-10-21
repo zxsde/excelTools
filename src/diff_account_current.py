@@ -71,7 +71,7 @@ def diff_account_current():
             a_to_b[v1[0]] = (k[0], k[1], v1[1])
     print(" visited: %s \n a_to_b: %s \n b_to_a: %s \n" % (visited, a_to_b, b_to_a), end="\n\n")
 
-    is_write = input("数据处理已完成，是否保存？(y/n):")
+    is_write = input("\033[1;33m 数据处理已完成，是否保存？(y/n):")
     if is_write == "y":
         save_data(account_current_path, a_to_b, b_to_a)
 
@@ -91,7 +91,7 @@ def save_data(account_current_path, a_to_b, b_to_a):
         ws[BTOA_B + str(k + 1)] = v[1]
         ws[BTOA_MONEY + str(k + 1)] = v[2]
     wb.save(account_current_path)
-    print("over!!!!!!!!!!!!")
+    print("\033[1;32m" + "Success!!!!!")
 
 
 if __name__ == '__main__':

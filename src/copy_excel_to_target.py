@@ -115,7 +115,7 @@ def calculate_pending_file():
     print("%s new other_table were scanned: \n %s \n" % (len(new_other), new_other))
 
     # 是否执行拷贝
-    is_copy = input("是否把以上新增的表分别拷贝到对应的目标路径下？(y/n):")
+    is_copy = input("\033[1;33m 是否把以上新增的表分别拷贝到对应的目标路径下？(y/n):")
     if is_copy == "y":
         all_tables = dict(pbc_tables, **prc_tables, **other_tables)
         copy_file_to_target(all_tables, new_pbc, new_prc, new_other)
@@ -145,6 +145,7 @@ def copy_file_to_target(all_tables, new_pbc, new_prc, new_other):
         count_other += 1
 
     print(" %s pbc copied \n %s prc copied \n %s other copied \n" % (count_pbc, count_prc, count_other))
+    print("\033[1;32m" + "Success!!!!!")
 
 
 if __name__ == '__main__':
