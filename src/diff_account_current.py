@@ -47,7 +47,7 @@ def diff_account_current():
     data = pandas.read_excel(account_current_path, sheet_name=SHEET_NAME, usecols=SPECIFIC_COL)
     # 删除空行
     data = data.dropna(axis=0, how='all')
-    print(data)
+    # print(data)
 
     all_accounts = {}  # 所有往来账目，格式为 {(公司, 公司): (行数, 金额)}
     visited = {}  # 和 b_to_a 一样，但格式为 {(公司B, 公司A): (行数, 金额)}

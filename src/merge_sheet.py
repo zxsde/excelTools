@@ -93,8 +93,9 @@ def get_all_pbc():
             file_path = os.path.join(root, file)
             all_pbc.append(file_path)
             # print(file_name)
-    print("扫描到 %s 个 excel 文件:\n %s" % (len(all_pbc), all_pbc), end="\n\n")
-    is_merge = input("\033[1;33m 确认文件个数是否正确，是否开始合并 Sheet %s ？(y/n):" % PENDING_MERGE_SHEETS)
+    print("\033[1;33m 扫描到 %s 个 excel 文件:\n %s" % (len(all_pbc), all_pbc), end="\n\n")
+    print("\033[1;33m 将要合并 %s 个 Sheet:\n %s" % (len(PENDING_MERGE_SHEETS), PENDING_MERGE_SHEETS), end="\n\n")
+    is_merge = input("\033[1;33m 是否开始合并如下 Sheet ？(y/n):")
     if is_merge == "y":
         merge_sheet()
 
@@ -102,7 +103,7 @@ def get_all_pbc():
 # 合并所有 excel 的指定 Sheet
 def merge_sheet():
     if not all_pbc or not PENDING_MERGE_SHEETS:
-        print("PENDING_MERGE_SHEETS or all_pbc is null!!")
+        print("\033[1;31m PENDING_MERGE_SHEETS or all_pbc is null!!")
         sys.exit(0)
     for sheet_name in PENDING_MERGE_SHEETS:
         dfs = pandas.DataFrame()

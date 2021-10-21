@@ -112,7 +112,7 @@ def get_name_from_summary_table(sheet_name=SUMMARY_SHEET, usecols=USE_COLS):
     summary_table_path = os.path.join(ROOT_PATH, SUMMARY_TABLE_PATH, SUMMARY_TABLE_NAME)
     print("summary table path: \n", summary_table_path, end="\n\n")
     if not os.path.exists(summary_table_path):
-        print("file not exist: %s" % summary_table_path)
+        print("\033[1;31m file not exist: %s" % summary_table_path)
         sys.exit(0)
     # usecols 可选参数 1. 默认 None，全选 2. str类型，"A,B,C" "A:C" "A,B:C" 3. int-list，[0, 1]  4. str-list, ["列名1", "列名2"]
     # 5. 函数，会把列名传入判断函数结果是否为True，可以用 | 做多个判断, usecols=lambda x:x in ["id", "name", "sex"]
@@ -137,7 +137,7 @@ def get_name_from_summary_table(sheet_name=SUMMARY_SHEET, usecols=USE_COLS):
 
     # 检测是否能找到对应的简表
     excel_not_exist = set(standard_simple_tables.values()) - set(simple_tables.keys())
-    print("%s excels can't found:\n %s" % (len(excel_not_exist), excel_not_exist), end="\n\n")
+    print("\033[1;31m %s excels can't found:\n %s" % (len(excel_not_exist), excel_not_exist), end="\n\n")
 
     is_continue = input("\033[1;33m 请检查是否所有简表都存在，开始计算公式？(y/n):")
     if is_continue == "y":
@@ -189,7 +189,7 @@ def cal_formulae(data, company_id):
     if is_write == "y":
         summary_table_path = os.path.join(ROOT_PATH, SUMMARY_TABLE_PATH, SUMMARY_TABLE_NAME)
         commons_utils.is_exist(summary_table_path)
-        print("saving data, the waiting time might be significant, please wait......")
+        print("\033[1;33m saving data, the waiting time might be significant, please wait......")
         write_formulae(summary_table_path)
 
 
@@ -200,9 +200,10 @@ def write_formulae(summary_table_path):
     for k, v in tqdm(cell_formulae.items()):
         ws[k] = v
     wb.save(summary_table_path)
-    print("write formulae success, reopen the excel, please wait......")
+    print("\033[1;33m write formulae success, reopen the excel, please wait......")
 
     # 重新打开一次 excel，否则可能不显示公式计算结果
+    just_open(summary_table_path)
     print("\033[1;32m" + "Success!!!!!")
 
 
