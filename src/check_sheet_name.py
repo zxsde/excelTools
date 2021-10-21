@@ -74,9 +74,8 @@ def check_sheet_name():
     wrong_order = []  # Sheet 顺序不对的 excel
 
     # 遍历 excel
-    for file in tqdm(all_pbc.keys()):
-        file_path = os.path.join(ROOT_PATH, ALL_PBC_PATH, file)
-        wb = load_workbook(file_path, read_only=True)
+    for file, path in tqdm(all_pbc.items()):
+        wb = load_workbook(path, read_only=True)
         if wb.sheetnames == STANDARD_SHEET:
             continue
         diff_set = set(STANDARD_SHEET).difference(set(wb.sheetnames))
@@ -101,7 +100,7 @@ def check_sheet_name():
 
 # 写入空 Sheet 页
 def write_sheet(wrong_excel):
-    for excel, sheets in wrong_excel.items():
+    for excel, sheets in tqdm(wrong_excel.items()):
         wb = load_workbook(all_pbc[excel])
         for sheet in sheets:
             wb.create_sheet(sheet)
