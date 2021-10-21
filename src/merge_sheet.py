@@ -126,7 +126,7 @@ def merge_sheet():
             short_name = get_short_name(file)
             # data["shortName"] = short_name
             # data["source"] = file
-            data.insert(1, "shortName", short_name)
+            data.insert(0, "shortName", short_name)
             data.insert(0, "source", file.split("\\")[-1])
             # concat默认纵向连接 DataFrame 对象，并且合并之后不改变每个 DataFrame 子对象的 index 值
             dfs = pandas.concat([dfs, data])
