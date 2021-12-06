@@ -10,7 +10,7 @@ import conf.common_utils as commons_utils
 
 """
 功能：检查表名
-描述：检查指定文件夹下所有 excel 中的 Sheet 名是否正确
+描述：检查指定文件夹下所有 excel 是否包含指定的 Sheet 页
 """
 
 
@@ -22,11 +22,42 @@ ROOT_PATH = "E:\\excelTools\\"
 # PBC 目录，所有 PBC 表所在的路径
 ALL_PBC_PATH = "target\\result-202109\\all_PBC"
 
-# 所有 excel 都应该包含(不必相同)如下 Sheet
+# 所有 excel 都应该包含如下 Sheet
 STANDARD_SHEET = [
-    '表1-test1',
-    '表2-test2',
-    '表3-test3',
+    '科目余额表（请自行贴入）',
+    '表0-科目辅助余额表',
+    '表1-资产负债表',
+    '表2-利润表',
+    '表3-现金流量表',
+    '表1.1-资产负债分析',
+    '表1.2-应收账款账龄分析',
+    '表1.3-其他应收款账龄分析',
+    '表1.4-预付账款账龄分析',
+    '表1.5-应付账款账龄分析',
+    '表1.6-其他应付款账龄分析',
+    '表1.7-预收账款账龄分析',
+    '表1.8-内部往来分析(公式自动）债权方',
+    '表1.8-内部往来分析(公式自动）债务方',
+    '表1.18-其他流动资产',
+    '表1.19-长期借款',
+    '表1.9-存货明细 ',
+    '表1.10-固定资产明细',
+    '表1.11-在建工程明细',
+    '表1.12-生物资产明细',
+    '表1.13-无形资产',
+    '表1.14-长摊',
+    '表1.15-应交税金分析',
+    '表1.16-货币资金',
+    '表1.17-应付职工薪酬',
+    '表2.1-收入构成',
+    '表2.2-成本构成',
+    '表2.3-销售费用',
+    '表2.4-管理费用',
+    '表2.5-财务费用',
+    '表2.6-营业外收入',
+    '表2.7-税金及附加',
+    '表2.8-营业外支出',
+    '表2.9-其他收益'
 ]
 
 # ===================================== 一般情况，仅需修改以上参数，根据实际情况进行修改
@@ -40,6 +71,7 @@ TEMP_PREFIX = ("~$", "~")
 # 所有的 excel，格式为 {excel 名: 路径+excel名}
 all_pbc = {}
 
+# 日志格式
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 logging.basicConfig(filename='..\\logs\\check_sheet_name.log', level=logging.DEBUG, format=LOG_FORMAT)
 
@@ -70,7 +102,7 @@ def get_all_pbc():
 
 # 检查所有 excel 是否包含指定 Sheet
 def check_sheet_name():
-    wrong_excel = {}  # 缺失 Sheet 的 excel
+    wrong_excel = {}  # {excel: 缺失的 Sheet}
     wrong_order = []  # Sheet 顺序不对的 excel
 
     # 遍历 excel
@@ -101,10 +133,15 @@ def check_sheet_name():
 # 写入空 Sheet 页
 def write_sheet(wrong_excel):
     for excel, sheets in tqdm(wrong_excel.items()):
-        wb = load_workbook(all_pbc[excel])
+        keep_vba = False
+        # xlsm 是启用了宏的文件，如果不设置keep_vba=True会造成excel无法打开
+        if excel.endswith("xlsm"):
+            keep_vba = True
+        wb = load_workbook(all_pbc[excel], keep_vba=keep_vba)
         for sheet in sheets:
             wb.create_sheet(sheet)
         wb.save(all_pbc[excel])
+    logging.debug(wrong_excel)
     print("\033[1;32m" + "Success!!!!!")
 
 
