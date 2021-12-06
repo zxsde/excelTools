@@ -110,6 +110,13 @@ https://www.cnblogs.com/wj-1314/p/8547763.html
 
 ## 更新日志
 
+### V3.0 (2021-12-06)
+ - 新功能：新增【刷新excel】的脚本(refresh_excel)，部分excel的公式无法显示为值，可用该脚本打开保存一次刷新公式。
+ - 新功能：新增【明细合计】的脚本(detailed_total)，可以把多个excel中各科目下的明细合计起来。
+ - 修改：部分变量、常量、注释的优化。
+ - 修复：更新公式脚本(change_cells_link)，若超链接的目标文件不存在，则不更新该公式。
+ - 修复：拼接Sheet的脚本(check_sheet_name)，修复插入sheet页后无法打开的Bug。
+
 ### V2.6 (2021-10-22)
  - 新功能：合并报表(merge_sheet)加强【过滤】功能，可以对多个 Sheet 删除其指定列为某个值的行。
  - 新功能：检查工作表表(check_sheet_name)新增【创建新 Sheet】功能，对缺失 Sheet 的工作簿创建一个空的 Sheet。

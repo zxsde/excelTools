@@ -5,6 +5,8 @@ import sys
 
 import shutil
 
+from win32com.client import DispatchEx
+
 """
 功能：提供一些公用的方法
 """
@@ -33,3 +35,17 @@ def is_exist(path, is_mkdir=False, is_rm=False):
         shutil.rmtree(path)
 
 
+# 刷新 Excel
+def refresh_file(file):
+        # 独立的进程。如果 Excel 已打开，使用 Dispatch 将在打开的 Excel 实例中创建新选项卡，使用 DispatchEx 将打开一个新的 Excel 实例。
+        xlapp = DispatchEx("Excel.Application")
+        # 设置不可见不警告
+        xlapp.Visible = False
+        # 打开工作簿
+        wb = xlapp.Workbooks.Open(file)
+        wb.RefreshAll()
+        # 停止宏/脚本,直到刷新完成
+        xlapp.CalculateUntilAsyncqueriesDone()
+        wb.Save()
+        # 关闭，可以清除进程
+        xlapp.Quit()
