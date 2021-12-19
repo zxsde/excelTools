@@ -190,7 +190,7 @@ def cal_formulae(data, company_id, not_in_pbc):
                 formulae = get_formulae(col, PLUS_FORMULAE[title_cell])
                 cell_formulae[cell] = "={}".format(formulae)
 
-    print("%s formulae \n %s" % (len(cell_formulae), cell_formulae), end="\n\n")
+    # print("%s formulae \n %s" % (len(cell_formulae), cell_formulae), end="\n\n")
     is_write = input("\033[1;33m 公式计算完成，是否保存到 %s ？(y/n):" % SUMMARY_TABLE_NAME)
     if is_write == "y":
         summary_table_path = os.path.join(ROOT_PATH, SUMMARY_TABLE_PATH, SUMMARY_TABLE_NAME)

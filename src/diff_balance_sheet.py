@@ -22,7 +22,7 @@ from collections import defaultdict
 # ===================================== 一般情况，仅需修改如下参数，根据实际情况进行修改
 
 # 根路径，所有代码，excel 的所在路径
-ROOT_PATH = "f:\\xing\\excelTools\\"
+ROOT_PATH = "E:\\excelTools\\"
 
 # PRC目录，所有 PRC 所在路径
 ALL_PRC_PATH = "target\\result-202111\\group_PRC"
@@ -33,7 +33,7 @@ ALL_PBC_PATH = "target\\result-202111\\group_PBC"
 # 哪两个 excel 进行对比,记录在这个文件中
 COMPANY_LIST = "target\\result-202111\\公司清单-211130.xlsx"
 
-# 公司清单中，记录pbc和prc对比关系的那张表s
+# 公司清单中，记录pbc和prc对比关系的那张表
 EXCEL_RELATION = "Sheet1"
 
 # "PBC编码, PBC简称, PRC全称",本场景比较特殊,需要"前缀+编码+简称+后缀"才能拼接出PBC的全称
@@ -126,8 +126,8 @@ def get_pbc_prc():
     # 获取所有 PRC 和 PBC,格式如 {excel全称: excel路径}
     all_prc = commons_utils.get_all_file(prc_path, TEMP_PREFIX, EXCEL_SUFFIX)
     all_pbc = commons_utils.get_all_file(pbc_path, TEMP_PREFIX, EXCEL_SUFFIX)
-    print("all PRC:\n %s" % all_prc, end="\n\n")
-    print("all PBC:\n %s" % all_pbc, end="\n\n")
+    print("all PRC %s :\n %s" % (len(all_prc), all_prc), end="\n\n")
+    print("all PBC %s :\n %s" % (len(all_pbc), all_pbc), end="\n\n")
 
     company_list_path = os.path.join(ROOT_PATH, COMPANY_LIST)
     # header 行数从 0 计数,我们平时看excel是从第1行开始,所以这里要减1
@@ -215,7 +215,7 @@ def diff_balance_sheet(all_prc, all_pbc):
                         pbc_coord = pbc_col_letter + str(row_pbc)
                         # 保存要对比的两个单元格坐标 {"D5": "D31"}
                         cell_relation[prc_coord] = pbc_coord
-                        # "D5" 和 "C31" 对应的值,最终要比较的就是这两个值
+                        # "D5" 和 "D31" 对应的值,最终要比较的就是这两个值
                         value_prc_cell = prc_sheet_list[row_prc - 1][prc_col_num - 1]
                         value_pbc_cell = pbc_sheet_list[row_pbc - 1][pbc_col_num - 1]
 
@@ -237,12 +237,11 @@ def diff_balance_sheet(all_prc, all_pbc):
             logging.info("---------------" + prc_file + " - " + prc_sheet + "非 0 非空的值:")
             logging.info("---------------" + pbc_file + " - " + pbc_sheet + "非 0 非空的值:")
             logging.info("要对比的单元格: %s" % cell_relation)
-            logging.info(prc_data)
-            logging.info(pbc_data)
+            logging.info(sorted(prc_data.items(), key=lambda item: item[0]))
+            logging.info(sorted(pbc_data.items(), key=lambda item: item[0]))
 
             check_out(prc_data, pbc_data, prc_file, prc_sheet, cell_relation)
     logging.info("================== 结果: %s" % diff_res)
-    logging.info("================== 行列可能错位的文件有: %s" % wrong_data)
 
     if diff_res:
         print("\033[1;31m 对比结束,不相同的文件如下:")
@@ -252,24 +251,37 @@ def diff_balance_sheet(all_prc, all_pbc):
                 tmp_sheet.append(SHEET_RELATION[sheet])
             print("\033[1;33m %s: %s ------ %s: %s" % (file, sheets, excel_relation[file], tmp_sheet))
             logging.info("%s: %s ------ %s: %s" % (file, sheets, excel_relation[file], tmp_sheet))
-    elif wrong_data:
-        print("\033[1;31m 行列可能错位的文件有:\n%s" % wrong_data)
+        logging.info("over!!!!!!!!!!!!!!!!!! \n\n\n")
     else:
         print("\033[1;32m" + "相同,Success!!!!!")
 
 
 # pbc的利润表比prc少一行,特殊处理
 def special_treatments(prc_data, prc_file, prc_sheet):
+    # 如果17行不为空，需要特殊处理18行和19行，先把18，19行加到prc_data
     for coord in list(prc_data.keys()):
         cell = split_alpha_num(coord)
-        # 17行有数据,18行一定有
+        cord_18 = cell[0] + str(18)
+        cord_19 = cell[0] + str(19)
+        if cell[1] == 17 and cord_18 not in prc_data.keys():
+            prc_data[cord_18] = 0
+        if cell[1] == 17 and cord_19 not in prc_data.keys():
+            prc_data[cord_19] = 0
+    # 17 行不为空，对18行和19行进行计算
+    for coord in list(prc_data.keys()):
+        cell = split_alpha_num(coord)
         if cell[1] == 17:
-            if cell[0] + str(18) not in prc_data:
-                print("\033[1;31m 18行为0，异常情况，请检查 %s - %s 及其对应的表" % (prc_file, prc_sheet))
-                sys.exit(0)
-            # 18 行减 17 行,结果保存在18行,并删除17行的值
-            prc_data[cell[0] + str(18)] -= prc_data[coord]
+            # 17行有数据,18行一定有，否则数据异常
+            cord_18 = cell[0] + str(18)
+            cord_19 = cell[0] + str(19)
+
+            # 特殊处理，prc中18行的值要减去17行，然后和pbc的17行比较
+            prc_data[cord_18] = round(prc_data[cord_18] - prc_data[coord], 2)
+            # 特殊处理，prc中19行的值要加上17行，然后和pbc的18行比较
+            prc_data[cord_19] = round(prc_data[cord_19] + prc_data[coord], 2)
+            # pbc中美prc这个17行，为方便对比，删除
             del prc_data[coord]
+        # prc中从18行起，和pbc错行比较，18行和17行比较
         if cell[1] >= 18:
             tmp = prc_data[coord]
             del prc_data[coord]
