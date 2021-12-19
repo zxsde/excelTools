@@ -5,7 +5,7 @@ import sys
 
 import pandas
 import openpyxl
-from win32com.client import Dispatch
+from win32com.client import DispatchEx
 from tqdm import tqdm
 
 import conf.constant as constant
@@ -35,7 +35,7 @@ SUMMARY_TABLE_NAME = "合并报表202111.xlsx"
 PBC_PREFIX = "PBC简表"
 
 # PBC 简表名字后缀
-TABLE_SUFFIX = "202111.xlsx"
+PBC_SUFFIX = "202111.xlsx"
 
 # 第一个区间 A ~ B，A是起始列，B 是科目所在列，第一个区间必须包含科目所在列，
 # 第二个区间 G ~ J，按需修改，如果所有列都需要处理，则设为 None
@@ -117,27 +117,33 @@ def get_name_from_summary_table(sheet_name=SUMMARY_SHEET, usecols=USE_COLS):
     print("company_id is: \n %s \n\n company_short_name is:\n %s" % (company_id, company_short), end="\n\n")
     print("%s company_id were recognized, check if it is correct" % len(company_id), end="\n\n")
 
-    # 汇总表中拼接出的PBC简表，实际不存在，保存下来，格式{公司编码: PBC简表全称}
-    excel_not_exist = {}
+    # 汇总表中拼接出的PBC简表，实际不存在，保存下来，
+    not_in_pbc = {}  # 汇总表中有pbc合集没有,格式{公司编码: PBC简表全称}
+    not_in_sum = []  # pbc合集有汇总表中没有,格式[PBC简表全称]
     # 用公司ID和简称拼接出完整的简表名称
     for com_id, com_name in zip(company_id, company_short):
         # 拼接出PBC简表的全称
-        table_name = PBC_PREFIX + "-" + com_id + com_name + "-" + TABLE_SUFFIX
+        table_name = PBC_PREFIX + "-" + com_id + com_name + "-" + PBC_SUFFIX
         if table_name not in simple_tables:
-            excel_not_exist[com_id] = table_name
+            not_in_pbc[com_id] = table_name
         standard_simple_tables[com_id] = table_name
-    print(standard_simple_tables, end="\n\n")
-    print("\033[1;31m %s excels can't found:\n %s" % (len(excel_not_exist), excel_not_exist), end="\n\n")
+    # print(standard_simple_tables, end="\n\n")
+    print("\033[1;31m 在汇总表中有,但PBC合集中没有的共计 %s 个:\n %s" % (len(not_in_pbc), not_in_pbc), end="\n\n")
+    # 查找在PBC合集中有,但汇总表中并没有的表
+    for pbc_table in simple_tables.keys():
+        if pbc_table not in standard_simple_tables.values():
+            not_in_sum.append(pbc_table)
+    print("\033[1;31m 在PBC合集中有,但汇总表中没有的共计 %s 个:\n %s" % (len(not_in_sum), not_in_sum), end="\n\n")
 
     is_continue = input("\033[1;33m 请检查是否所有 PBC 简表都存在，开始计算公式？(y/n):")
     if is_continue == "y":
-        cal_formulae(data, company_id, excel_not_exist)
+        cal_formulae(data, company_id, not_in_pbc)
 
 
 # 计算各科目和公司对应单元格的公式
-def cal_formulae(data, company_id, excel_not_exist):
+def cal_formulae(data, company_id, not_in_pbc):
     # 将要更新的列
-    change_col = [convert_to_column(col + 1) for col in data.columns.values]
+    change_col = [convert_to_letter(col + 1) for col in data.columns.values]
     print("the following columns will be changed: \n", change_col, end="\n\n")
     # 所有 PBC 的绝对路径，第三个参数 '' 是为了在文件夹结尾多一个 \ ，否则拼接文件时会把目录连起来
     target_absolute_path = os.path.join(ROOT_PATH, ALL_PBC_PATH, '')
@@ -147,10 +153,10 @@ def cal_formulae(data, company_id, excel_not_exist):
         if com_id not in company_id:
             continue
         # 汇总表中拼接出的PBC表，实际找不到，不更新该列
-        if com_id in excel_not_exist:
+        if com_id in not_in_pbc:
             continue
 
-        col = convert_to_column(i + 1)
+        col = convert_to_letter(i + 1)
         # 遍历每一行，计算各科目的公式
         for row in data.itertuples():
             # 所有科目都在第 TITLE_COL 列
@@ -212,21 +218,21 @@ def write_formulae(summary_table_path):
 # 重新打开一次 excel，不然无法计算出公式的值，显示 #REF
 def just_open(filename):
     print("\033[1;33m 正在重新打开 excel，可能需要几分钟, 请耐心等待......")
-    xlApp = Dispatch("Excel.Application")
+    xlApp = DispatchEx("Excel.Application")
     xlApp.Visible = False
     xlBook = xlApp.Workbooks.Open(filename)
     xlBook.Save()
     xlBook.Close()
 
 
-# 把列转换为字母，第 1 列对应 'A'，如第 27 列转化为 ZA
-def convert_to_column(n: int) -> str:
+# 把数字列转换为字母，第 1 列对应 "A"，如第 27 列转化为 "AA"
+def convert_to_letter(n: int) -> str:
     # ord 返回对应的 ASCII 数值, 'A' = 65
     ascii_letter = (n - 1) % 26 + ord('A')
     if n <= 26:
         return chr(ascii_letter)
     else:
-        return convert_to_column((n - 1) // 26) + chr(ascii_letter)
+        return convert_to_letter((n - 1) // 26) + chr(ascii_letter)
 
 
 # 拼接公式，把 C 列的 73,76:79 拼接成 C73,C76:C79
