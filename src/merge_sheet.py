@@ -8,6 +8,7 @@ import numpy
 from tqdm import tqdm
 
 import conf.common_utils as commons_utils
+import conf.constant as constant
 
 """
 功能：合并 Sheet
@@ -28,43 +29,15 @@ SUMMARY_TABLE_PATH = "target\\result-202109\\summary_table"
 # 合并完后 excel 的名字，重复执行时候建议每次修改名字，因为会覆盖源数据
 RESULT_EXCEL = "merge_sheet.xlsx"
 
-# 要合并的 sheet，支持多个 Sheet 各自合并，不需要的自行注释
-PENDING_MERGE_SHEETS = [
-    # '科目余额表（请自行贴入）',
-    # '表0-科目辅助余额表',
-    # '表1-资产负债表',
-    # '表2-利润表',
-    # '表3-现金流量表',
-    # '表1.1-资产负债分析',
-    '表1.2-应收账款账龄分析',
-    '表1.3-其他应收款账龄分析',
-    # '表1.4-预付账款账龄分析',
-    # '表1.5-应付账款账龄分析',
-    # '表1.6-其他应付款账龄分析',
-    # '表1.7-预收账款账龄分析',
-    # '表1.8-内部往来分析(公式自动）债权方',
-    # '表1.8-内部往来分析(公式自动）债务方',
-    # '表1.18-其他流动资产',
-    # '表1.19-长期借款',
-    # '表1.9-存货明细 ',
-    # '表1.10-固定资产明细',
-    # '表1.11-在建工程明细',
-    # '表1.12-生物资产明细',
-    '表1.13-无形资产',
-    # '表1.14-长摊',
-    # '表1.15-应交税金分析',
-    '表1.16-货币资金',
-    # '表1.17-应付职工薪酬',
-    # '表2.1-收入构成',
-    # '表2.2-成本构成',
-    # '表2.3-销售费用',
-    # '表2.4-管理费用',
-    # '表2.5-财务费用',
-    # '表2.6-营业外收入',
-    # '表2.7-税金及附加',
-    # '表2.8-营业外支出',
-    # '表2.9-其他收益'
-]
+# 要合并的 sheet，格式为 {sheet, 表头所在行}，合并单元格中的表头，用上面的一行
+ALL_SHEETS = constant.ALL_SHEETS
+
+# 过滤开关，配合下面的 FILTER_SPECIFIC_VALUE 使用，1 为保留指定数据，-1 为删除指定数据
+FILTER_SWITCH = -1
+
+# 要过滤的数据，如下会筛选出表 "1.2-应收账款账龄" 列中 "借方余额" 为 0 和空的行，"城市" 列中为 "合计"和 的行，
+# 若 FILTER_SWITCH = -1 则删除这些数据，保留其它数据，若 FILTER_SWITCH = 1 则保留这些数据，删除其它数据。
+FILTER_VALUE = constant.FILTER_VALUE
 
 # 黑名单，写在这里的 excel 不会参与合并，为了排除一些个例
 BLACK_LIST = {
@@ -75,24 +48,6 @@ BLACK_LIST = {
 # USE_COLS = "B:C,E:G" 表示只处理 B,C,E,F,G 这几列
 USE_COLS = None
 
-# 表头所在的行，从 0 开始计数，无表头改为 None，一般和 SKIP_ROWS 任选一个配置即可
-HEADER = 2
-
-# 跳过前几行，有的表会空几行才有数据，跳过之后的第一行为表头
-SKIP_ROWS = 0
-
-# 要过滤的数据，如下对于 sheet1 会先过滤掉 "金额" 列中为 0 的行，再过滤掉"公司" 列中为 "小计"和"内部往来" 的行，
-# 对于 sheet2 会过滤掉"期末余额"为空的行，不想做任何过滤，把对应的 Sheet 置为空列表。
-FILTER_SPECIFIC_VALUE = {
-    "Sheet1": {
-        "金额": [0],
-        "公司": ["小计", "内部往来"]
-    },
-    "Sheet2": {
-        "期末余额": [numpy.NaN]
-    },
-}
-
 # ===================================== 一般情况，仅需修改以上参数，根据实际情况进行修改
 
 # EXCEl 文件后缀，只处理该后缀的文件。
@@ -101,11 +56,14 @@ EXCEL_SUFFIX = ("xlsx", "xlsm", "xls")
 # 临时文件前缀，不处理该前缀的文件，该前缀一般是临时文件，如已打开的 excel 会额外生成一个额 ~ 开头的文件
 TEMP_PREFIX = ("~$", "~")
 
+# 跳过前几行，跳过之后的第一行为表头，如已经设置表头，该常量不必配置
+SKIP_ROWS = 0
+
 # 所有的 excel，如 "E:\\excel\\xxx.xlsx"
 all_pbc = []
 
 # 合并后的数据
-merged_sheets = []
+sheet_merged = []
 
 
 # 从 all_PBC 下获取所有的表
@@ -126,18 +84,18 @@ def get_all_pbc():
             all_pbc.append(file_path)
             # print(file_name)
     print("\033[1;33m 扫描到 %s 个 excel 文件:\n %s" % (len(all_pbc), all_pbc), end="\n\n")
-    print("\033[1;33m 将要合并 %s 个 Sheet:\n %s" % (len(PENDING_MERGE_SHEETS), PENDING_MERGE_SHEETS), end="\n\n")
+    print("\033[1;33m 将要合并 %s 个 Sheet:\n %s" % (len(ALL_SHEETS), ALL_SHEETS), end="\n\n")
     is_merge = input("\033[1;33m 是否开始合并如下 Sheet ？(y/n):")
     if is_merge == "y":
-        merge_sheet()
+        concat_sheet()
 
 
 # 合并所有 excel 的指定 Sheet
-def merge_sheet():
-    if not all_pbc or not PENDING_MERGE_SHEETS:
-        print("\033[1;31m PENDING_MERGE_SHEETS or all_pbc is null!!")
+def concat_sheet():
+    if not all_pbc or not ALL_SHEETS:
+        print("\033[1;31m ALL_SHEETS or all_pbc is null!!")
         sys.exit(0)
-    for sheet_name in PENDING_MERGE_SHEETS:
+    for sheet_name in ALL_SHEETS:
         dfs = pandas.DataFrame()
         for file in tqdm(all_pbc):
             # file 包含路径，截取 excel 名判断是否在黑名单中，在黑名单不处理
@@ -147,7 +105,7 @@ def merge_sheet():
             try:
                 data = pandas.read_excel(file,
                                          sheet_name=sheet_name,
-                                         header=HEADER,
+                                         header=ALL_SHEETS[sheet_name] - 1,
                                          usecols=USE_COLS,
                                          skiprows=SKIP_ROWS)
             except ValueError as Argument:
@@ -162,30 +120,35 @@ def merge_sheet():
             data.insert(0, "source", file.split("\\")[-1])
             # concat默认纵向连接 DataFrame 对象，并且合并之后不改变每个 DataFrame 子对象的 index 值
             dfs = pandas.concat([dfs, data])
-        merged_sheets.append(dfs)
+        sheet_merged.append(dfs)
 
     is_write = input("\033[1;33m 数据处理已完成，是否保存到 %s ？注意：源数据会被覆盖，请做好备份(y/n):" % RESULT_EXCEL)
     if is_write == "y":
         result_excel = os.path.join(ROOT_PATH, SUMMARY_TABLE_PATH, RESULT_EXCEL)
         print("saving data, please wait......")
-        sava_file(result_excel, merged_sheets)
+        sava_file(result_excel, sheet_merged)
 
 
 # 保存到本地
 def sava_file(result, data):
     with pandas.ExcelWriter(result) as writer:
         for i in tqdm(range(len(data))):
-            data[i].to_excel(writer, sheet_name=PENDING_MERGE_SHEETS[i])
+            data[i].to_excel(writer, sheet_name=ALL_SHEETS[i])
     print("\033[1;32m" + "Success!!!!!")
 
 
 # 过滤掉符合条件的行，对指定 Sheet 的指定列为指定值的行进行过滤
 def filter_value(data, file, sheet_name):
-    if sheet_name not in FILTER_SPECIFIC_VALUE:
+    if sheet_name not in FILTER_VALUE:
         return data
-    for col, val in FILTER_SPECIFIC_VALUE[sheet_name].items():
+    for col, val in FILTER_VALUE[sheet_name].items():
         try:
-            data = data[~data[col].isin(val)]
+            if FILTER_SWITCH == -1:
+                data = data[~data[col].isin(val)]
+            elif FILTER_SWITCH == 1:
+                data = data[data[col].isin(val)]
+            else:
+                print("\033[1;31m FILTER_SWITCH 的值应为 1 或 -1")
         except KeyError as Argument:
             print("\033[1;31m KeyError:%s:\n excel: %s \n Sheet: %s" % (Argument, file, sheet_name))
             sys.exit(0)

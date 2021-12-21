@@ -4,8 +4,9 @@ import os
 import sys
 
 import shutil
-
 import conf.common_utils as commons_utils
+
+from tqdm import tqdm
 
 """
 功能：拷贝 excel
@@ -130,17 +131,17 @@ def copy_file_to_target(all_tables, new_pbc, new_prc, new_other):
     count_other = 0
 
     # 拷贝 PBC 表
-    for pbc in new_pbc:
+    for pbc in tqdm(new_pbc):
         shutil.copyfile(all_tables[pbc][0], all_tables[pbc][1])
         count_pbc += 1
 
     # 拷贝 PRC 表
-    for prc in new_prc:
+    for prc in tqdm(new_prc):
         shutil.copyfile(all_tables[prc][0], all_tables[prc][1])
         count_prc += 1
 
     # 拷贝其他表
-    for other in new_other:
+    for other in tqdm(new_other):
         shutil.copyfile(all_tables[other][0], all_tables[other][1])
         count_other += 1
 
