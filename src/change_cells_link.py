@@ -174,7 +174,7 @@ def cal_formulae(data, company_id, not_in_pbc):
                 simple_table = standard_simple_tables[com_id]
                 cell_formulae[cell] = "={}".format('\'' + target_absolute_path + '[' + simple_table + ']' +
                                                    SIMPLE_SHEET + '\'' + LINK_FORMULAE[title_cell])
-                # 216 行的 现金 科目，链接的是附注，仅有一项，所以特殊处理
+                # 216 行的 现金 科目，链接的是附注，仅有一项，所以单独做特殊处理
                 if title_cell == ("现金", "216"):
                     cell_formulae[cell] = "={}".format('\'' + target_absolute_path + '[' + simple_table + ']' +
                                                        '附注' + '\'' + LINK_FORMULAE[title_cell])
