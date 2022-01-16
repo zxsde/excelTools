@@ -30,6 +30,9 @@ SHEET_NAME = "Sheet1"
 # 将要处理哪几列，因为不一定所有的列都需要进行处理，如下就是只会处理 "D,E,G" 三列
 SPECIFIC_COL = "D,E,G"
 
+# 表头所在行，默认首行为表头，没有表头设为 None
+HEADER = None
+
 # (分公司A, 分公司B, 100万) 将要保存的列
 ATOB_A, ATOB_B, ATOB_MONEY = "I", "J", "K"
 
@@ -44,7 +47,9 @@ def diff_account_current():
     account_current_path = os.path.join(ROOT_PATH, ACCOUNT_CURRENT_PATH, ACCOUNT_CURRENT)
     print("account_current_path: \n", account_current_path, end="\n\n")
     commons_utils.is_exist(account_current_path)
-    data = pandas.read_excel(account_current_path, sheet_name=SHEET_NAME, usecols=SPECIFIC_COL)
+    # 代码从 0 计数，excel中的行数需要减1
+    header = HEADER if HEADER is None else HEADER - 1
+    data = pandas.read_excel(account_current_path, sheet_name=SHEET_NAME, usecols=SPECIFIC_COL, header=header)
     # 删除空行
     data = data.dropna(axis=0, how='all')
     # print(data)
@@ -57,7 +62,7 @@ def diff_account_current():
     for row in data.itertuples():
         # row.Index 从 0 开始，比 excel 中实际行数少 1，所以甲方/乙方/金额分别在第 1/2/3 列
         all_accounts[(row[1], row[2])] = (row.Index+1, row[3])
-    print("all_accounts", all_accounts, end="\n\n")
+    print("所有往来账目共 %s 条: \n%s" % (len(all_accounts), all_accounts), end="\n\n")
 
     # 根据甲方账款找对应的乙方账款
     for k in list(all_accounts):
@@ -69,7 +74,9 @@ def diff_account_current():
             del all_accounts[k]
         if k not in visited:
             a_to_b[v1[0]] = (k[0], k[1], v1[1])
-    print(" visited: %s \n a_to_b: %s \n b_to_a: %s \n" % (visited, a_to_b, b_to_a), end="\n\n")
+    print("visited: %s 个:\n%s" % (len(visited), visited), end="\n\n")
+    print("a_to_b: %s 个: \n%s" % (len(a_to_b), a_to_b), end="\n\n")
+    print("b_to_a: %s 个: \n%s" % (len(b_to_a), b_to_a), end="\n\n")
 
     is_write = input("\033[1;33m 数据处理已完成，是否保存？(y/n):")
     if is_write == "y":
