@@ -13,7 +13,7 @@ import conf.common_utils as commons_utils
 from collections import defaultdict
 
 """
-功能：核对资产负债表 balance sheet, income statement
+功能：核对资产负债表(balance sheet)/利润表(income statement)/现金流量表(cash flow statement)
 描述：对比两个excel的两个Sheet里指定列的值是否相等,需要预先把excel之间的对应关系处理好,保存在一个excel中.
      实际支持多个excel,多张表,多个列的比较,比较过程中是以PRC表为准的,也就是PRC有的才执行，没的不会执行.
      注意，不支持多对一的比较，如 sheet1 和 sheet2 都与 sheet3 比较的情况，需要分两次比较。
