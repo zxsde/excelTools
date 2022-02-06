@@ -63,7 +63,7 @@ SKIP_ROWS = 0
 all_pbc = []
 
 # 合并后的数据
-sheet_merged = []
+sheet_merged = {}
 
 
 # 从 all_PBC 下获取所有的表
@@ -120,7 +120,7 @@ def concat_sheet():
             data.insert(0, "source", file.split("\\")[-1])
             # concat默认纵向连接 DataFrame 对象，并且合并之后不改变每个 DataFrame 子对象的 index 值
             dfs = pandas.concat([dfs, data])
-        sheet_merged.append(dfs)
+        sheet_merged[sheet_name] = dfs
 
     is_write = input("\033[1;33m 数据处理已完成，是否保存到 %s ？注意：源数据会被覆盖，请做好备份(y/n):" % RESULT_EXCEL)
     if is_write == "y":
@@ -132,8 +132,8 @@ def concat_sheet():
 # 保存到本地
 def sava_file(result, data):
     with pandas.ExcelWriter(result) as writer:
-        for i in tqdm(range(len(data))):
-            data[i].to_excel(writer, sheet_name=ALL_SHEETS[i])
+        for sheet, df in tqdm(data.items()):
+            df.to_excel(writer, sheet_name=sheet)
     print("\033[1;32m" + "Success!!!!!")
 
 
