@@ -167,4 +167,12 @@ def get_short_name(com_name):
 
 
 if __name__ == '__main__':
-    get_all_pbc()
+    # 先全部刷新一次要合并的文件，否则有的数据读取不到
+    is_refresh = input("\033[1;33m 建议把要合并的文件先全部刷新一次（刷新一次即可），是否刷新？(y/n):")
+    if is_refresh == "y":
+        os.system("refresh_excel.py")
+        is_continue = input("\033[1;33m 刷新完成，是否继续？(y/n):")
+        if is_continue == "y":
+            get_all_pbc()
+    else:
+        get_all_pbc()
